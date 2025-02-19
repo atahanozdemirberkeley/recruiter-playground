@@ -1,0 +1,11 @@
+id: "two_sum"
+title: "Two Sum"
+difficulty: "easy"
+category: "array"
+description: |
+  Given an array of integers nums and an integer target, return indices of the two numbers in nums such that they add up to target.
+  You may assume that each input would have exactly one solution, and you may not use the same element twice.
+hints:
+  - "Use a hash map to store the difference between the target and each element"
+  - "Check if the current element exists in the hash map"
+  - "Consider edge cases such as duplicate elements and negative numbers"

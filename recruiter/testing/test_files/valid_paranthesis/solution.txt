@@ -1,0 +1,22 @@
+CODE:
+
+def is_valid(s):
+    # Mapping of closed to open parentheses for quick lookup
+    bracket_map = {')': '(', '}': '{', ']': '['}
+    stack = []  # Stack to keep track of opening parentheses
+
+    for char in s:
+        if char in bracket_map:  # It's a closing bracket
+            top_element = stack.pop() if stack else '#'
+            if bracket_map[char] != top_element:
+                return False
+        else:
+            stack.append(char)  # It's an opening bracket
+
+    return not stack  # If stack is empty, it's a valid string
+
+
+
+EXPLANATION:
+
+For this problem, we can use a stack to help check for the correct order and matching of the parentheses. We push open brackets onto the stack and, when we encounter a close bracket, we check if the top of the stack is the corresponding open bracket. If not, or if the stack is empty when we find a closing bracket, the string is invalid.

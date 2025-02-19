@@ -1,0 +1,39 @@
+- input: "{[]}"
+  output: true
+  description: "Nested brackets"
+
+- input: "([{}])"
+  output: true
+  description: "Multiple nested brackets"
+
+- input: "((()))"
+  output: true
+  description: "Multiple nested parentheses"
+
+- input: "({[)]}"
+  output: false
+  description: "Incorrectly nested brackets"
+
+- input: "["
+  output: false
+  description: "Single opening bracket"
+
+- input: "]"
+  output: false
+  description: "Single closing bracket"
+
+- input: "([]"
+  output: false
+  description: "Unmatched opening bracket"
+
+- input: "[])"
+  output: false
+  description: "Unmatched closing bracket"
+
+- input: ""
+  output: true
+  description: "Empty string"
+
+- input: "{[()]}"
+  output: true
+  description: "Correctly nested brackets"

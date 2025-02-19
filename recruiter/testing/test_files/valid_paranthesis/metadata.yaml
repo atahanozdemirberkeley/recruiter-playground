@@ -1,0 +1,8 @@
+id: "valid_paranthesis"
+title: "Valid Paranthesis"
+difficulty: "medium"
+category: "stack"
+hints:
+  - "Think about how you can use a stack data structure"
+  - "Consider what happens when you encounter a closing bracket"
+  - "What should happen if you encounter a closing bracket but the stack is empty?"
