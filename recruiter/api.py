@@ -44,9 +44,9 @@ class AssistantFnc(llm.FunctionContext):
     @llm.ai_callable(
         description="Get the current time left for the interview in HH:MM:SS format"
     )
-    def get_interview_duration(self) -> str:
+    def get_interview_time_left(self) -> str:
         """Returns the current interview duration in HH:MM:SS format"""
-        return self.interview_controller.get_interview_duration(formatted=True)
+        return self.interview_controller.get_interview_time_left(formatted=True)
 
     @llm.ai_callable(
         description="Get the duration of a specific interview stage in HH:MM:SS format"

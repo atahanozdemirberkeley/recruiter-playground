@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 async def entrypoint(ctx: JobContext):
     # Initialize QuestionManager
-    question_manager = QuestionManager(Path("testing/test_files"))
+    question_manager = QuestionManager(Path("recruiter/testing/test_files"))
     fnc_ctx = AssistantFnc()
 
     # Initialize InterviewController
@@ -57,14 +57,10 @@ async def entrypoint(ctx: JobContext):
         return
 
     # Load and format the template
-    template = load_template('template_initial_prompt')
+    template = load_template('template_initial_prompt', save=True)
     formatted_prompt = template.format(
         PROMPT_INFORMATION=prompt_information
     )
-
-    os.makedirs("prompts", exist_ok=True)
-    with open("prompts/initial_prompt.txt", "w") as f:
-        f.write(formatted_prompt)
 
     # Create initial context with formatted prompt
     initial_ctx = llm.ChatContext().append(
@@ -116,7 +112,7 @@ async def entrypoint(ctx: JobContext):
             )
 
         # Log interaction with interview duration
-        duration = interview_controller.get_interview_duration()
+        duration = interview_controller.get_interview_time_since_start()
         log_queue.put_nowait(
             f"[{duration}] USER:\n{msg.content}\n\n"
             f"CODE:\n{code_snapshot}\n\n"
@@ -128,7 +124,7 @@ async def entrypoint(ctx: JobContext):
     def on_agent_speech_committed(msg: llm.ChatMessage):
         # Take a snapshot of the code
         code_snapshot = file_watcher._take_snapshot()
-        duration = interview_controller.get_interview_duration()
+        duration = interview_controller.get_interview_time_since_start()
         log_queue.put_nowait(
             f"[{duration}] AGENT:\n{msg.content}\n\n"
             f"CODE :\n{code_snapshot}\n\n"
