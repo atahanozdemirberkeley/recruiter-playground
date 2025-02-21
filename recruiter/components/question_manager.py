@@ -25,6 +25,7 @@ class Question:
     solution: str
     test_cases: List[Dict]
     hints: List[str]
+    # in minutes
     duration: int
 
     @classmethod
@@ -129,37 +130,15 @@ class QuestionManager:
             difficulty=question.difficulty,
             category=question.category,
             question=question.question,
+            duration=question.duration,
             hints=chr(10).join(f"- {hint}" for hint in question.hints),
             solution=question.solution
-    )
+        )
 
     def get_solution(self, question_id: str) -> Optional[str]:
         """Get the solution for a specific question (for verification only)."""
         question = self.get_question(question_id)
         return question.solution_code if question else None
-
-    def display_questions_table(self) -> Table:
-        """Display all questions in a formatted table."""
-        table = Table(title="Available Interview Questions")
-
-        # Add columns
-        table.add_column("Index", justify="right", style="cyan")
-        table.add_column("ID", style="blue")
-        table.add_column("Title", style="green")
-        table.add_column("Difficulty", style="yellow")
-        table.add_column("Category", style="magenta")
-
-        # Add rows
-        for idx, question in enumerate(self.questions.values(), 1):
-            table.add_row(
-                str(idx),
-                question.id,
-                question.title,
-                question.difficulty,
-                question.category
-            )
-
-        return table
 
     def select_question(self, question_number: int = 1) -> Tuple[str, str]:
         """
@@ -173,15 +152,15 @@ class QuestionManager:
         """
         if not self.questions:
             raise ValueError("No questions available")
-        
-        
+
         # Get list of question IDs
         question_ids = list(self.questions.keys())
-        
+
         # Validate index
         if question_number < 0 or question_number >= len(question_ids):
-            raise ValueError(f"Question number {question_number} is out of range. Available questions: 1-{len(question_ids)}")
-        
+            raise ValueError(
+                f"Question number {question_number} is out of range. Available questions: 1-{len(question_ids)}")
+
         selected_id = question_ids[question_number]
         prompt = self.complete_prompt(selected_id)
         return selected_id, prompt

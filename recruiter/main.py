@@ -16,12 +16,15 @@ from rich.console import Console
 from components.interview_state import InterviewState, InterviewController
 from utils.template_utils import load_template
 import os
+import logging
 
 
 console = Console()
 load_dotenv()
 
 QUESTION_NUMBER = 1
+
+logger = logging.getLogger(__name__)
 
 
 async def entrypoint(ctx: JobContext):
@@ -33,20 +36,25 @@ async def entrypoint(ctx: JobContext):
     interview_controller = InterviewController(question_manager)
     fnc_ctx.interview_controller = interview_controller
 
+    # Connect to room
+    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+
+    # Set the room in the interview controller
+    interview_controller.room = ctx.room
+
     try:
-        # Interactively select a question
+        # Initialize the interview state (synchronous)
         question_id, prompt_information = question_manager.select_question(
             QUESTION_NUMBER)
-        console.print(
-            f"\nSelected question: {question_manager.get_question(question_id).title}", style="green")
-
-        # Initialize the interview state with selected question
         interview_controller.initialize_interview(question_id)
+
+        # Explicitly create and start the timer updates task
+        asyncio.create_task(interview_controller.start_time_updates(ctx.room))
+        logger.info("Timer updates task created")
 
     except KeyboardInterrupt:
         console.print("\nExiting...", style="yellow")
         return
-
 
     # Load and format the template
     template = load_template('template_initial_prompt')
@@ -64,11 +72,9 @@ async def entrypoint(ctx: JobContext):
         text=formatted_prompt
     )
 
-    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
-
     # Initialize FileWatcher
     file_watcher = FileWatcher(
-        "/testing/test_files/test.py")
+        "recruiter/testing/test.py")
 
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),

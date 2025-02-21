@@ -3,7 +3,7 @@ from typing import Annotated
 from livekit.agents import llm
 import logging
 from components.filewatcher import FileWatcher
-from recruiter.components.interview_state import InterviewStage
+from components.interview_state import InterviewStage
 
 logger = logging.getLogger("api")
 logger.setLevel(logging.INFO)
@@ -42,17 +42,17 @@ class AssistantFnc(llm.FunctionContext):
         return self.file_watcher.last_snapshot
 
     @llm.ai_callable(
-        description="Get the current time left for the interview in HH:MM format"
+        description="Get the current time left for the interview in HH:MM:SS format"
     )
     def get_interview_duration(self) -> str:
-        """Returns the current interview duration in HH:MM format"""
+        """Returns the current interview duration in HH:MM:SS format"""
         return self.interview_controller.get_interview_duration(formatted=True)
 
     @llm.ai_callable(
-        description="Get the duration of a specific interview stage in HH:MM format"
+        description="Get the duration of a specific interview stage in HH:MM:SS format"
     )
     def get_stage_duration(self, stage: Annotated[str, "The interview stage to get duration for"]) -> str:
-        """Returns the duration of a specific stage in HH:MM format"""
+        """Returns the duration of a specific stage in HH:MM:SS format"""
         try:
             interview_stage = InterviewStage(stage)
             return self.interview_controller.get_stage_duration(interview_stage, formatted=True)

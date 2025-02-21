@@ -1,5 +1,5 @@
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Union
 from components.question_manager import QuestionManager, Question
 import json
@@ -8,7 +8,10 @@ from livekit.plugins.openai import LLM
 from livekit.agents import llm
 from datetime import datetime, timedelta
 import asyncio
-from livekit.data.data_packet import DataPacket_ReliabilityMode
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class InterviewStage(Enum):
@@ -26,11 +29,13 @@ class InterviewState:
     question: Question
     current_stage: InterviewStage
     # {id: {"code": str, "timestamp": int}}
-    code_snapshots: Dict[str, Dict[str, Union[str, int]]]
-    clarifications: List[str]
-    insights: List[str]
+    code_snapshots: Dict[str, Dict[str, Union[str, int]]
+                         ] = field(default_factory=dict)
+    clarifications: List[str] = field(default_factory=list)
+    insights: List[str] = field(default_factory=list)
     start_time: Optional[datetime] = None
-    stage_timestamps: Dict[InterviewStage, datetime] = {}
+    stage_timestamps: Dict[InterviewStage,
+                           datetime] = field(default_factory=dict)
     interview_end_time: Optional[datetime] = None
 
 
@@ -46,18 +51,19 @@ class InterviewController:
         )
 
     def initialize_interview(self, question_id: str):
-        question = self.question_manager.get_question(question_id)
+        """Initialize the interview state with the selected question"""
+        self.question = self.question_manager.get_question(question_id)
         self.state = InterviewState(
-            question=question,
+            question=self.question,
             current_stage=InterviewStage.INTRODUCTION,
-            # TODO: Consider removing code_snapshots from here
             code_snapshots={},
             clarifications=[],
             insights=[],
             start_time=datetime.now(),
-            interview_end_time=datetime.now() + timedelta(minutes=question.duration)
+            interview_end_time=datetime.now() + timedelta(minutes=self.question.duration)
         )
-        self.start_interview_timer(question.duration)
+        logger.info(
+            f"Interview initialized with duration: {self.question.duration} minutes")
 
     def get_system_prompt(self) -> str:
         return self._generate_stage_prompt()
@@ -173,7 +179,7 @@ class InterviewController:
         except json.JSONDecodeError:
             return None
 
-    def get_interview_duration(self, formatted: bool = False) -> Union[int, str]:
+    def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """
         Returns the current interview duration.
         Args:
@@ -191,6 +197,21 @@ class InterviewController:
             return f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
 
         return seconds
+
+    def get_interview_time_left(self, formatted: bool = False) -> Union[int, str]:
+        """
+        Returns the time left in the interview.
+        """
+        time_since_start = self.get_interview_time_since_start(formatted=False)
+        time_left_seconds = int(self.question.duration * 60) - time_since_start
+
+        if formatted:
+            hours = time_left_seconds // 3600
+            minutes = (time_left_seconds % 3600) // 60
+            remaining_seconds = time_left_seconds % 60
+            return f"{hours:02d}:{minutes:02d}:{remaining_seconds:02d}"
+
+        return time_left_seconds
 
     def get_stage_duration(self, stage: InterviewStage, formatted: bool = False) -> Union[int, str]:
         """
@@ -228,29 +249,32 @@ class InterviewController:
     async def start_time_updates(self, room):
         """Start publishing time updates to the room"""
         while True:
-            if self.state.interview_end_time:
-                time_left = max(
-                    0, (self.state.interview_end_time - datetime.now()).total_seconds())
+            if self.state and self.state.interview_end_time:
+                time_left = self.get_interview_time_left(formatted=True)
 
-                # Create the message payload
                 payload = json.dumps({
                     "timeLeft": time_left
                 }).encode('utf-8')
 
-                # Publish using the data channel API
-                await room.local_participant.publish_data(
-                    payload,
-                    topic="interview-time",
-                    reliability_mode=DataPacket_ReliabilityMode.RELIABLE
-                )
+                try:
+                    await room.local_participant.publish_data(
+                        payload,
+                        topic="interview-time"
+                    )
+                except Exception as e:
+                    logger.error(f"Error publishing time update: {e}")
 
-            await asyncio.sleep(1)  # Update every second
+            await asyncio.sleep(1)
 
     async def start_interview_timer(self, duration_minutes: int):
         """Start the interview with a specified duration"""
+        logger.info(f"Starting interview timer for {duration_minutes} minutes")
         self.state.start_time = datetime.now()
         self.state.interview_end_time = self.state.start_time + \
             timedelta(minutes=duration_minutes)
+
+        logger.info(
+            f"Interview end time set to: {self.state.interview_end_time}")
 
         # Start time updates when interview starts
         asyncio.create_task(self.start_time_updates(self.room))
