@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from aiofile import async_open as open
+from aiofile import async_open
 from api import AssistantFnc
 from dotenv import load_dotenv
 from livekit import rtc
@@ -60,6 +60,7 @@ async def entrypoint(ctx: JobContext):
         PROMPT_INFORMATION=prompt_information
     )
 
+    os.makedirs("prompts", exist_ok=True)
     with open("prompts/initial_prompt.txt", "w") as f:
         f.write(formatted_prompt)
 
@@ -139,7 +140,7 @@ async def entrypoint(ctx: JobContext):
         )
 
     async def write_transcription():
-        async with open("transcriptions.log", "w") as f:
+        async with async_open("transcriptions.log", "w") as f:
             while True:
                 msg = await log_queue.get()
                 if msg is None:
