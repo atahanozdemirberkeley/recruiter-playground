@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 async def entrypoint(ctx: JobContext):
     # Initialize QuestionManager
-    question_manager = QuestionManager(Path("recruiter/testing/test_files"))
+    question_manager = QuestionManager(Path("testing/test_files"))
     fnc_ctx = AssistantFnc()
 
     # Initialize InterviewController
@@ -70,7 +70,7 @@ async def entrypoint(ctx: JobContext):
 
     # Initialize FileWatcher
     file_watcher = FileWatcher(
-        "recruiter/testing/test.py")
+        "testing/test.py")
 
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),

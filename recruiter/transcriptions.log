@@ -1,0 +1,52 @@
+[3] AGENT:
+Hey, welcome to our interview. Are you ready to start?
+
+CODE :
+def twoSum(hello):
+    return hello
+""" [WORK IN PROGRESS] """
+
+================================================================================
+
+[26] USER:
+Yes, I am.
+
+CODE:
+def twoSum(hello):
+    return hello
+""" [WORK IN PROGRESS] """
+
+STAGE: introduction
+================================================================================
+
+[33] AGENT:
+Great! Let's dive into the problem at hand. Could you start by explaining your overall strategy for tackling the "Two Sum" problem? What steps do you plan to take to find the solution?
+
+CODE :
+def twoSum(hello):
+    return hello
+""" [WORK IN PROGRESS] """
+
+================================================================================
+
+[43] USER:
+So are you able to see my code?
+
+CODE:
+def twoSum(hello):
+    return hello
+""" [WORK IN PROGRESS] """
+
+STAGE: introduction
+================================================================================
+
+[56] AGENT:
+I see that your implementation is still a work in progress. Once you've set up the initial structure of your function, perhaps you could walk me through the next steps in your thought process. How do you plan to identify the two numbers in the array that add up to the target?
+
+CODE :
+def twoSum(hello):
+    return hello
+""" [WORK IN PROGRESS] """
+
+================================================================================
+
