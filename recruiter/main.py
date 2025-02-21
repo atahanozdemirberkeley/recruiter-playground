@@ -31,6 +31,7 @@ async def entrypoint(ctx: JobContext):
 
     # Initialize InterviewController
     interview_controller = InterviewController(question_manager)
+    fnc_ctx.interview_controller = interview_controller
 
     # Add cleanup callback for graceful shutdown
     async def cleanup():
@@ -42,9 +43,11 @@ async def entrypoint(ctx: JobContext):
 
     try:
         # Interactively select a question
-        question_id, prompt_information = question_manager.select_question(QUESTION_NUMBER)
-        console.print(f"\nSelected question: {question_manager.get_question(question_id).title}", style="green")
-        
+        question_id, prompt_information = question_manager.select_question(
+            QUESTION_NUMBER)
+        console.print(
+            f"\nSelected question: {question_manager.get_question(question_id).title}", style="green")
+
         # Initialize the interview state with selected question
         interview_controller.initialize_interview(question_id)
 
@@ -101,17 +104,17 @@ async def entrypoint(ctx: JobContext):
     def on_user_speech_committed(msg: llm.ChatMessage):
         asyncio.create_task(async_handle_speech(msg))
 
-
     async def async_handle_speech(msg: llm.ChatMessage):
         if isinstance(msg.content, list):
             msg.content = "\n".join(
                 "[image]" if isinstance(x, llm.ChatImage) else x for x in msg
             )
-        
+
         # Take code snapshot
         code_snapshot = file_watcher._take_snapshot()
-        interview_controller.state.code_snapshots[str(len(interview_controller.state.code_snapshots))] = code_snapshot
-        
+        interview_controller.state.code_snapshots[str(
+            len(interview_controller.state.code_snapshots))] = code_snapshot
+
         # Only update agent context if stage changes
         new_stage_prompt = await interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
         if new_stage_prompt:
@@ -119,7 +122,7 @@ async def entrypoint(ctx: JobContext):
                 role="system",
                 text=new_stage_prompt
             )
-        
+
         # Log interaction
         log_queue.put_nowait(
             f"[{datetime.now()}] USER:\n{msg.content}\n\n"
@@ -163,7 +166,7 @@ if __name__ == "__main__":
             entrypoint_fnc=entrypoint,
             api_key=os.getenv('LIVEKIT_API_KEY'),
             api_secret=os.getenv('LIVEKIT_API_SECRET'),
-            ws_url=os.getenv('LIVEKIT_URL'),  
+            ws_url=os.getenv('LIVEKIT_URL'),
             port=8082
         ))
     except Exception as e:
