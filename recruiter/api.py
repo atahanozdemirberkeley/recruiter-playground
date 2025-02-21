@@ -14,7 +14,7 @@ class AssistantFnc(llm.FunctionContext):
         super().__init__()
 
         self.file_watcher = FileWatcher(
-            "/testing/test_files/test.py")
+            "recruiter/testing/test.py")
 
         self.file_watcher.start_watching()
         self.interview_controller = None  # set from main.py
