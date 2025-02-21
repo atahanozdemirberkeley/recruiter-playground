@@ -28,6 +28,7 @@ import { ConnectionState, LocalParticipant, Track } from "livekit-client";
 import { QRCodeSVG } from "qrcode.react";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import tailwindTheme from "src/lib/tailwindTheme.preval";
+import { CodeEditor } from "src/components/codeEditor/CodeEditor";
 
 export interface PlaygroundMeta {
   name: string;
@@ -56,6 +57,8 @@ export default function Playground({
 
   const roomState = useConnectionState();
   const tracks = useTracks();
+
+  const [userCode, setUserCode] = useState<string>("");
 
   useEffect(() => {
     if (roomState === ConnectionState.Connected) {
@@ -382,9 +385,6 @@ export default function Playground({
   return (
     <>
       <PlaygroundHeader
-        title={config.title}
-        logo={logo}
-        githubLink={config.github_link}
         height={headerHeight}
         accentColor={config.settings.theme_color}
         connectionState={roomState}
@@ -392,60 +392,37 @@ export default function Playground({
           onConnect(roomState === ConnectionState.Disconnected)
         }
       />
-      <div
-        className={`flex gap-4 py-4 grow w-full selection:bg-${config.settings.theme_color}-900`}
-        style={{ height: `calc(100% - ${headerHeight}px)` }}
-      >
-        <div className="flex flex-col grow basis-1/2 gap-4 h-full lg:hidden">
-          <PlaygroundTabbedTile
-            className="h-full"
-            tabs={mobileTabs}
-            initialTab={mobileTabs.length - 1}
-          />
-        </div>
-        <div
-          className={`flex-col grow basis-1/2 gap-4 h-full hidden lg:${
-            !config.settings.outputs.audio && !config.settings.outputs.video
-              ? "hidden"
-              : "flex"
-          }`}
-        >
-          {config.settings.outputs.video && (
-            <PlaygroundTile
-              title="Video"
-              className="w-full h-full grow"
-              childrenClassName="justify-center"
-            >
-              {videoTileContent}
-            </PlaygroundTile>
-          )}
-          {config.settings.outputs.audio && (
-            <PlaygroundTile
-              title="Audio"
-              className="w-full h-full grow"
-              childrenClassName="justify-center"
-            >
-              {audioTileContent}
-            </PlaygroundTile>
-          )}
+      <div className="flex gap-4 py-4 grow w-full">
+        {/* Code Editor Section */}
+        <div className="flex flex-col basis-1/2 gap-4 h-full">
+          <PlaygroundTile title="Problem: Two Sum" className="w-full h-full">
+            <CodeEditor
+              value={userCode}
+              onChange={setUserCode}
+              language="python"
+              theme="vs-dark"
+            />
+          </PlaygroundTile>
         </div>
 
-        {config.settings.chat && (
+        {/* Interview Section */}
+        <div className="flex flex-col basis-1/2 gap-4 h-full">
+          <PlaygroundTile
+            title="Audio"
+            className="w-full h-1/4"
+            childrenClassName="justify-center"
+          >
+            {audioTileContent}
+          </PlaygroundTile>
+
           <PlaygroundTile
             title="Chat"
-            className="h-full grow basis-1/4 hidden lg:flex"
+            className="w-full h-3/4"
+            childrenClassName="justify-center"
           >
             {chatTileContent}
           </PlaygroundTile>
-        )}
-        <PlaygroundTile
-          padding={false}
-          backgroundColor="gray-950"
-          className="h-full w-full basis-1/4 items-start overflow-y-auto hidden max-w-[480px] lg:flex"
-          childrenClassName="h-full grow items-start"
-        >
-          {settingsTileContent}
-        </PlaygroundTile>
+        </div>
       </div>
     </>
   );
