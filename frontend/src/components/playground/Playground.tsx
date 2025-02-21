@@ -28,6 +28,7 @@ import { ConnectionState, LocalParticipant, Track } from "livekit-client";
 import { QRCodeSVG } from "qrcode.react";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import tailwindTheme from "src/lib/tailwindTheme.preval";
+import { InterviewTimer } from "src/components/timer/InterviewTimer";
 
 export interface PlaygroundMeta {
   name: string;
@@ -236,6 +237,13 @@ export default function Playground({
             </div>
           )}
         </ConfigurationPanelItem>
+
+        <ConfigurationPanelItem title="Interview">
+          <div className="flex items-center">
+            <InterviewTimer className="text-sm" />
+          </div>
+        </ConfigurationPanelItem>
+
         <ConfigurationPanelItem title="Status">
           <div className="flex flex-col gap-2">
             <NameValueRow

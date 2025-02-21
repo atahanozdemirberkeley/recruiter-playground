@@ -16,6 +16,7 @@ from rich.console import Console
 from components.interview_state import InterviewState, InterviewController
 from utils.template_utils import load_template
 import os
+import logging
 
 
 console = Console()
@@ -23,46 +24,43 @@ load_dotenv()
 
 QUESTION_NUMBER = 1
 
+logger = logging.getLogger(__name__)
+
 
 async def entrypoint(ctx: JobContext):
     # Initialize QuestionManager
-    question_manager = QuestionManager(Path("testing/test_files"))
+    question_manager = QuestionManager(Path("recruiter/testing/test_files"))
     fnc_ctx = AssistantFnc()
 
     # Initialize InterviewController
     interview_controller = InterviewController(question_manager)
+    fnc_ctx.interview_controller = interview_controller
 
-    # Add cleanup callback for graceful shutdown
-    async def cleanup():
-        fnc_ctx.file_watcher.stop_watching()
-        console.print("\nCleaning up file watcher...", style="yellow")
+    # Connect to room
+    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    # Register the cleanup function
-    ctx.add_shutdown_callback(cleanup)
+    # Set the room in the interview controller
+    interview_controller.room = ctx.room
 
     try:
-        # Interactively select a question
-        question_id, prompt_information = question_manager.select_question(QUESTION_NUMBER)
-        console.print(f"\nSelected question: {question_manager.get_question(question_id).title}", style="green")
-        
-        # Initialize the interview state with selected question
+        # Initialize the interview state (synchronous)
+        question_id, prompt_information = question_manager.select_question(
+            QUESTION_NUMBER)
         interview_controller.initialize_interview(question_id)
+
+        # Explicitly create and start the timer updates task
+        asyncio.create_task(interview_controller.start_time_updates(ctx.room))
+        logger.info("Timer updates task created")
 
     except KeyboardInterrupt:
         console.print("\nExiting...", style="yellow")
-        await cleanup()  # Ensure cleanup happens on keyboard interrupt
         return
 
-
     # Load and format the template
-    template = load_template('template_initial_prompt')
+    template = load_template('template_initial_prompt', save=True)
     formatted_prompt = template.format(
         PROMPT_INFORMATION=prompt_information
     )
-
-    os.makedirs("prompts", exist_ok=True)
-    with open("prompts/initial_prompt.txt", "w") as f:
-        f.write(formatted_prompt)
 
     # Create initial context with formatted prompt
     initial_ctx = llm.ChatContext().append(
@@ -70,11 +68,9 @@ async def entrypoint(ctx: JobContext):
         text=formatted_prompt
     )
 
-    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
-
     # Initialize FileWatcher
     file_watcher = FileWatcher(
-        "/testing/test_files/test.py")
+        "recruiter/testing/test.py")
 
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),
@@ -88,13 +84,7 @@ async def entrypoint(ctx: JobContext):
     # Start the file watcher
     file_watcher.start_watching()
 
-    # Add file_watcher cleanup to shutdown callbacks
-    ctx.add_shutdown_callback(file_watcher.stop_watching)
-
     agent.start(ctx.room)
-
-    # listen to incoming chat messages, only required if you'd like the agent to
-    # answer incoming messages from Chat
 
     log_queue = asyncio.Queue()
 
@@ -102,17 +92,17 @@ async def entrypoint(ctx: JobContext):
     def on_user_speech_committed(msg: llm.ChatMessage):
         asyncio.create_task(async_handle_speech(msg))
 
-
     async def async_handle_speech(msg: llm.ChatMessage):
         if isinstance(msg.content, list):
             msg.content = "\n".join(
                 "[image]" if isinstance(x, llm.ChatImage) else x for x in msg
             )
-        
+
         # Take code snapshot
         code_snapshot = file_watcher._take_snapshot()
-        interview_controller.state.code_snapshots[str(len(interview_controller.state.code_snapshots))] = code_snapshot
-        
+        interview_controller.state.code_snapshots[str(
+            len(interview_controller.state.code_snapshots))] = code_snapshot
+
         # Only update agent context if stage changes
         new_stage_prompt = await interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
         if new_stage_prompt:
@@ -120,10 +110,11 @@ async def entrypoint(ctx: JobContext):
                 role="system",
                 text=new_stage_prompt
             )
-        
-        # Log interaction
+
+        # Log interaction with interview duration
+        duration = interview_controller.get_interview_time_since_start()
         log_queue.put_nowait(
-            f"[{datetime.now()}] USER:\n{msg.content}\n\n"
+            f"[{duration}] USER:\n{msg.content}\n\n"
             f"CODE:\n{code_snapshot}\n\n"
             f"STAGE: {interview_controller.state.current_stage.value}\n"
             f"{'='*80}\n\n"
@@ -133,8 +124,9 @@ async def entrypoint(ctx: JobContext):
     def on_agent_speech_committed(msg: llm.ChatMessage):
         # Take a snapshot of the code
         code_snapshot = file_watcher._take_snapshot()
+        duration = interview_controller.get_interview_time_since_start()
         log_queue.put_nowait(
-            f"[{datetime.now()}] AGENT:\n{msg.content}\n\n"
+            f"[{duration}] AGENT:\n{msg.content}\n\n"
             f"CODE :\n{code_snapshot}\n\n"
             f"{'='*80}\n\n"  # Separator for better readability
         )
@@ -164,7 +156,7 @@ if __name__ == "__main__":
             entrypoint_fnc=entrypoint,
             api_key=os.getenv('LIVEKIT_API_KEY'),
             api_secret=os.getenv('LIVEKIT_API_SECRET'),
-            ws_url=os.getenv('LIVEKIT_URL'),  
+            ws_url=os.getenv('LIVEKIT_URL'),
             port=8082
         ))
     except Exception as e:
