@@ -28,7 +28,7 @@ import { ConnectionState, LocalParticipant, Track } from "livekit-client";
 import { QRCodeSVG } from "qrcode.react";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import tailwindTheme from "src/lib/tailwindTheme.preval";
-import { InterviewTimer } from 'src/components/timer/InterviewTimer';
+import { InterviewTimer } from "src/components/timer/InterviewTimer";
 
 export interface PlaygroundMeta {
   name: string;
@@ -237,6 +237,13 @@ export default function Playground({
             </div>
           )}
         </ConfigurationPanelItem>
+
+        <ConfigurationPanelItem title="Interview">
+          <div className="flex items-center">
+            <InterviewTimer className="text-sm" />
+          </div>
+        </ConfigurationPanelItem>
+
         <ConfigurationPanelItem title="Status">
           <div className="flex flex-col gap-2">
             <NameValueRow
@@ -392,9 +399,7 @@ export default function Playground({
         onConnectClicked={() =>
           onConnect(roomState === ConnectionState.Disconnected)
         }
-      >
-        <InterviewTimer className="ml-auto mr-4" />
-      </PlaygroundHeader>
+      />
       <div
         className={`flex gap-4 py-4 grow w-full selection:bg-${config.settings.theme_color}-900`}
         style={{ height: `calc(100% - ${headerHeight}px)` }}
