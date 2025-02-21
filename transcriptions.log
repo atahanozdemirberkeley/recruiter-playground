@@ -2,8 +2,14 @@
 Hey, welcome to our interview. Are you ready to start?
 
 CODE :
-def test():
-    "this is a function"
+
+
+================================================================================
+
+[24] AGENT:
+We have about 59 minutes left for this interview. If you're ready, let's dive into the problem. Could you walk me through your initial strategy for tackling the "Two Sum" problem?
+
+CODE :
 
 
 ================================================================================
