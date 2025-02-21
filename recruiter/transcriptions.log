@@ -2,15 +2,29 @@
 Hey, welcome to our interview. Are you ready to start?
 
 CODE :
+def twoSum(help):
+    return help
+
+"hello"
 
 
 ================================================================================
 
-[22] AGENT:
-Great! Let's dive into the problem. Could you start by explaining your overall strategy for solving the "Two Sum" problem? What high-level approach are you thinking of using to find the indices of the two numbers?
+[17] AGENT:
+Great! Let's dive into the problem. Can you start by explaining your overall strategy for tackling the "Two Sum" problem? What steps do you plan to take?
 
 CODE :
 
+
+================================================================================
+
+[57] AGENT:
+I currently don't see any code updates yet. Once you've begun coding, I should be able to view the changes in your workspace. Could you provide a brief overview of the inputs and the approach you're considering?
+
+CODE :
+def twoSum(hello):
+    return hello
+""" [WORK IN PROGRESS] """
 
 ================================================================================
 

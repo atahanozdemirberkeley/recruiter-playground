@@ -1,2 +1,2 @@
-def twoSum(help):
-    return help
+def twoSum(hello):
+    return hello

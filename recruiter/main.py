@@ -64,7 +64,7 @@ async def entrypoint(ctx: JobContext):
 
     os.makedirs("prompts", exist_ok=True)
     async with async_open("prompts/initial_prompt", "w") as f:
-        f.write(formatted_prompt)
+        await f.write(formatted_prompt)
 
 
 
@@ -76,7 +76,7 @@ async def entrypoint(ctx: JobContext):
 
     # Initialize FileWatcher
     file_watcher = FileWatcher(
-        "recruiter/testing/test.py")
+        "testing/test_files/test.py")
 
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),
