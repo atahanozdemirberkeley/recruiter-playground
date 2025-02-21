@@ -1,0 +1,22 @@
+As an interview assistant, evaluate the current interview stage.
+
+Current Stage: {current_stage}
+Latest User Message: {user_message}
+Code Status: {code_status}
+Clarifications Asked: {clarifications_count}
+Insights Gathered: {insights_count}
+
+Based on this context, determine:
+1. Should we stay in the current stage or move to the next stage?
+2. What specific question should we ask next?
+3. Should we record any insights or clarifications?
+
+Respond in the following JSON format:
+{
+    "stage_action": "STAY" or "NEXT",
+    "record": {
+        "type": "insight" or "clarification" or "none",
+        "content": "The insight or clarification to record (if any)"
+    },
+    "reasoning": "Brief explanation of your decisions"
+}

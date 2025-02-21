@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from components.question_manager import QuestionManager, Question
 import json
+from utils.template_utils import load_template
 from livekit.plugins.openai import LLM
 from livekit.agents import llm
 
@@ -48,28 +49,14 @@ class InterviewController:
         
     def evaluate_stage_transition(self, user_message: str, code_snapshot: str) -> str:
         """Generate a prompt for the LLM to evaluate stage transition"""
-        return f"""As an interview assistant, evaluate the current interview stage.
-
-    Current Stage: {self.state.current_stage.value}
-    Latest User Message: {user_message}
-    Code Status: {'Has code' if code_snapshot else 'No code'}
-    Clarifications Asked: {len(self.state.clarifications)}
-    Insights Gathered: {len(self.state.insights)}
-
-    Based on this context, determine:
-    1. Should we stay in the current stage or move to the next stage?
-    2. What specific question should we ask next?
-    3. Should we record any insights or clarifications?
-
-    Respond in the following JSON format:
-    {{
-        "stage_action": "STAY" or "NEXT",
-        "record": {{
-            "type": "insight" or "clarification" or "none",
-            "content": "The insight or clarification to record (if any)"
-        }},
-        "reasoning": "Brief explanation of your decisions"
-    }}"""
+        template = load_template('template_stage_evaluation')
+        return template.format(
+            current_stage=self.state.current_stage.value,
+            user_message=user_message,
+            code_status='Has code' if code_snapshot else 'No code',
+            clarifications_count=len(self.state.clarifications),
+            insights_count=len(self.state.insights)
+        )
 
     def update_stage(self, llm_response: dict) -> None:
         """Update interview state based on LLM's evaluation"""

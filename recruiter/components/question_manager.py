@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 import yaml
 import logging
+from utils.template_utils import load_template
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt, IntPrompt
@@ -120,24 +121,15 @@ class QuestionManager:
         if not question:
             raise ValueError(f"Question {question_id} not found")
 
-        return f"""
-            Title: {question.title}
-            Difficulty: {question.difficulty}
-            Category: {question.category}
-
-            
-            '''
-            Problem Statement:
-            {question.question}
-            '''
-
-            '''
-            Available Hints:
-            {chr(10).join(f"- {hint}" for hint in question.hints)}
-            '''
-            Solution: {question.solution}
-
-            """
+        template = load_template('template_question_context')
+        return template.format(
+            title=question.title,
+            difficulty=question.difficulty,
+            category=question.category,
+            question=question.question,
+            hints=chr(10).join(f"- {hint}" for hint in question.hints),
+            solution=question.solution
+    )
 
     def get_solution(self, question_id: str) -> Optional[str]:
         """Get the solution for a specific question (for verification only)."""
@@ -171,12 +163,23 @@ class QuestionManager:
         """
         Select the question by its number.
 
+        Args:
+            question_number: The index of the question to select
+
         Returns:
-            Tuple[str, str]: First question ID and the complete prompt
+            Tuple[str, str]: Question ID and the complete prompt
         """
         if not self.questions:
             raise ValueError("No questions available")
-
-        selected_id = next(iter(self.questions.keys()))
+        
+        
+        # Get list of question IDs
+        question_ids = list(self.questions.keys())
+        
+        # Validate index
+        if question_number < 0 or question_number >= len(question_ids):
+            raise ValueError(f"Question number {question_number} is out of range. Available questions: 1-{len(question_ids)}")
+        
+        selected_id = question_ids[question_number]
         prompt = self.complete_prompt(selected_id)
         return selected_id, prompt
