@@ -6,7 +6,7 @@ interface InterviewTimerProps {
 }
 
 export const InterviewTimer = ({ className }: InterviewTimerProps) => {
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
   const handleTimeUpdate = (msg: any) => {
     if (msg.topic === 'interview-time') {
@@ -26,8 +26,6 @@ export const InterviewTimer = ({ className }: InterviewTimerProps) => {
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
-
-  if (timeLeft === null) return null;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
