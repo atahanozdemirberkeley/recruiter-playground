@@ -33,7 +33,7 @@ def load_template(template_path: str, project_root: Optional[str] = None) -> str
             full_path = template_path
         else:
             # Otherwise join with templates directory
-            full_path = os.path.join(project_root, "recruiter/templates", template_path)
+            full_path = os.path.join(project_root, "templates", template_path)
             
             # If path doesn't include .txt extension, add it
             if not full_path.endswith('.txt'):
