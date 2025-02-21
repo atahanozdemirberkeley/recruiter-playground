@@ -16,6 +16,7 @@ from rich.console import Console
 from components.interview_state import InterviewState, InterviewController
 from utils.template_utils import load_template
 import os
+import logging
 
 
 console = Console()
@@ -32,36 +33,41 @@ async def entrypoint(ctx: JobContext):
     # Initialize InterviewController
     interview_controller = InterviewController(question_manager)
 
-    # Add cleanup callback for graceful shutdown
-    async def cleanup():
-        fnc_ctx.file_watcher.stop_watching()
-        console.print("\nCleaning up file watcher...", style="yellow")
-
-    # Register the cleanup function
-    ctx.add_shutdown_callback(cleanup)
-
     try:
         # Interactively select a question
         question_id, prompt_information = question_manager.select_question(QUESTION_NUMBER)
         console.print(f"\nSelected question: {question_manager.get_question(question_id).title}", style="green")
+        
+        # # Get question text and format as Python comment
+        # question_text = question_manager.get_question(question_id)
+        # formatted_question = '"""\n' + question_text + '\n"""'
+        
+        # # Send formatted question to frontend through data channel
+        # data = {
+        #     'type': 'question_text',
+        #     'text': formatted_question
+        # }
+        # ctx.room.local_participant.publish_data(json.dumps(data).encode())
         
         # Initialize the interview state with selected question
         interview_controller.initialize_interview(question_id)
 
     except KeyboardInterrupt:
         console.print("\nExiting...", style="yellow")
-        await cleanup()  # Ensure cleanup happens on keyboard interrupt
         return
 
 
+    # Create prompts directory if it doesn't exist
+    os.makedirs("prompts", exist_ok=True)
+    
     # Load and format the template
     template = load_template('template_initial_prompt')
     formatted_prompt = template.format(
         PROMPT_INFORMATION=prompt_information
     )
 
-    os.makedirs("prompts", exist_ok=True)
-    with open("prompts/initial_prompt.txt", "w") as f:
+    # Save the formatted prompt
+    with open("prompts/initial_prompt.txt", "w", encoding='utf-8') as f:
         f.write(formatted_prompt)
 
     # Create initial context with formatted prompt
@@ -72,10 +78,6 @@ async def entrypoint(ctx: JobContext):
 
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    # Initialize FileWatcher
-    file_watcher = FileWatcher(
-        "/testing/test_files/test.py")
-
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),
         stt=openai.STT(),
@@ -84,12 +86,6 @@ async def entrypoint(ctx: JobContext):
         chat_ctx=initial_ctx,
         fnc_ctx=fnc_ctx,
     )
-
-    # Start the file watcher
-    file_watcher.start_watching()
-
-    # Add file_watcher cleanup to shutdown callbacks
-    ctx.add_shutdown_callback(file_watcher.stop_watching)
 
     agent.start(ctx.room)
 
@@ -109,9 +105,17 @@ async def entrypoint(ctx: JobContext):
                 "[image]" if isinstance(x, llm.ChatImage) else x for x in msg
             )
         
-        # Take code snapshot
-        code_snapshot = file_watcher._take_snapshot()
+
+        # TODO: Think about whether having this
+        # # Get current code from FileWatcher
+        code_snapshot = fnc_ctx.file_watcher.get_current_code()
         interview_controller.state.code_snapshots[str(len(interview_controller.state.code_snapshots))] = code_snapshot
+        
+        # # Update agent context with current code state
+        # agent.chat_ctx.append(
+        #     role="system",
+        #     text=f"Current code state:\n```python\n{code_snapshot}\n```"
+        # )
         
         # Only update agent context if stage changes
         new_stage_prompt = await interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
@@ -131,13 +135,31 @@ async def entrypoint(ctx: JobContext):
 
     @agent.on("agent_speech_committed")
     def on_agent_speech_committed(msg: llm.ChatMessage):
-        # Take a snapshot of the code
-        code_snapshot = file_watcher._take_snapshot()
+        # Get current code instead of taking snapshot
+        code_snapshot = fnc_ctx.file_watcher.get_current_code()
         log_queue.put_nowait(
             f"[{datetime.now()}] AGENT:\n{msg.content}\n\n"
             f"CODE :\n{code_snapshot}\n\n"
-            f"{'='*80}\n\n"  # Separator for better readability
+            f"{'='*80}\n\n"
         )
+
+    @agent.on("data_received")
+    def on_data_received(data: bytes):
+        try:
+            decoded = json.loads(data.decode('utf-8'))
+            if decoded['type'] == 'code_update':
+                # Update FileWatcher with new code
+                fnc_ctx.file_watcher.update_code(decoded['code'])
+                logger.info("Code updated in FileWatcher")
+                
+                # Update agent's context with new code
+                code_snapshot = fnc_ctx.file_watcher.get_current_code()
+                agent.chat_ctx.append(
+                    role="system",
+                    text=f"Current code state:\n```python\n{code_snapshot}\n```"
+                )
+        except Exception as e:
+            logger.error(f"Error handling data: {e}")
 
     async def write_transcription():
         async with async_open("transcriptions.log", "w") as f:

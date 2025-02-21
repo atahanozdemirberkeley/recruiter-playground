@@ -47,16 +47,6 @@ class InterviewController:
     def get_system_prompt(self) -> str:
         return self._generate_stage_prompt()
         
-    def evaluate_stage_transition(self, user_message: str, code_snapshot: str) -> str:
-        """Generate a prompt for the LLM to evaluate stage transition"""
-        template = load_template('template_stage_evaluation')
-        return template.format(
-            current_stage=self.state.current_stage.value,
-            user_message=user_message,
-            code_status='Has code' if code_snapshot else 'No code',
-            clarifications_count=len(self.state.clarifications),
-            insights_count=len(self.state.insights)
-        )
 
     def update_stage(self, llm_response: dict) -> None:
         """Update interview state based on LLM's evaluation"""
@@ -128,7 +118,15 @@ class InterviewController:
 
     async def evaluate_and_update_stage(self, user_message: str, code_snapshot: str) -> Optional[str]:
         """Returns new stage prompt only if stage changed, None otherwise"""
-        evaluation_prompt = self.evaluate_stage_transition(user_message, code_snapshot)
+
+        template = load_template('template_stage_evaluation')
+        evaluation_prompt = template.format(
+            current_stage=self.state.current_stage.value,
+            user_message=user_message,
+            code_status='Has code' if code_snapshot else 'No code',
+            clarifications_count=len(self.state.clarifications),
+            insights_count=len(self.state.insights)
+        )
         
         # Create chat context for the evaluation
         chat_ctx = llm.ChatContext().append(

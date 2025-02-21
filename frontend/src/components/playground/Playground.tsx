@@ -29,6 +29,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import tailwindTheme from "src/lib/tailwindTheme.preval";
 import { CodeEditor } from "src/components/codeEditor/CodeEditor";
+import { Button } from "src/components/button/Button";
 
 export interface PlaygroundMeta {
   name: string;
@@ -85,10 +86,9 @@ export default function Playground({
 
   const onDataReceived = useCallback(
     (msg: any) => {
+      const decoded = JSON.parse(new TextDecoder("utf-8").decode(msg.payload));
+
       if (msg.topic === "transcription") {
-        const decoded = JSON.parse(
-          new TextDecoder("utf-8").decode(msg.payload)
-        );
         let timestamp = new Date().getTime();
         if ("timestamp" in decoded && decoded.timestamp > 0) {
           timestamp = decoded.timestamp;
@@ -102,9 +102,11 @@ export default function Playground({
             isSelf: true,
           },
         ]);
+      } else if (decoded.type === "question_text") {
+        setUserCode(decoded.text);
       }
     },
-    [transcripts]
+    [transcripts, setUserCode]
   );
 
   useDataChannel(onDataReceived);
@@ -382,6 +384,22 @@ export default function Playground({
     ),
   });
 
+  useEffect(() => {
+    if (
+      roomState === ConnectionState.Connected &&
+      localParticipant &&
+      userCode
+    ) {
+      const data = {
+        type: "code_update",
+        code: userCode, // This matches decoded['code'] in backend
+      };
+      const encoder = new TextEncoder();
+      const dataBytes = encoder.encode(JSON.stringify(data));
+      localParticipant.publishData(dataBytes, { reliable: true });
+    }
+  }, [userCode, roomState, localParticipant]);
+
   return (
     <>
       <PlaygroundHeader
@@ -393,20 +411,21 @@ export default function Playground({
         }
       />
       <div className="flex gap-4 py-4 grow w-full">
-        {/* Code Editor Section */}
+        {/* Left Side - Code Editor */}
         <div className="flex flex-col basis-1/2 gap-4 h-full">
-          <PlaygroundTile title="Problem: Two Sum" className="w-full h-full">
+          <PlaygroundTile title="Problem" className="w-full h-full">
             <CodeEditor
               value={userCode}
-              onChange={setUserCode}
+              onChange={(code) => setUserCode(code)}
               language="python"
               theme="vs-dark"
+              placeholder="Write your solution here..."
             />
           </PlaygroundTile>
         </div>
 
-        {/* Interview Section */}
-        <div className="flex flex-col basis-1/2 gap-4 h-full">
+        {/* Middle - Audio & Chat */}
+        <div className="flex flex-col basis-[30%] gap-4 h-full">
           <PlaygroundTile
             title="Audio"
             className="w-full h-1/4"
@@ -416,13 +435,23 @@ export default function Playground({
           </PlaygroundTile>
 
           <PlaygroundTile
-            title="Chat"
+            title="Interview Chat"
             className="w-full h-3/4"
             childrenClassName="justify-center"
           >
             {chatTileContent}
           </PlaygroundTile>
         </div>
+
+        {/* Right Side - Settings & Info */}
+        <PlaygroundTile
+          padding={false}
+          backgroundColor="gray-950"
+          className="h-full basis-1/5 items-start overflow-y-auto flex"
+          childrenClassName="h-full grow items-start"
+        >
+          {settingsTileContent}
+        </PlaygroundTile>
       </div>
     </>
   );

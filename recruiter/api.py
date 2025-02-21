@@ -1,5 +1,5 @@
 import enum
-from typing import Annotated
+from typing import Annotated, Optional
 from livekit.agents import llm
 import logging
 from components.filewatcher import FileWatcher
@@ -11,30 +11,29 @@ logger.setLevel(logging.INFO)
 class AssistantFnc(llm.FunctionContext):
     def __init__(self) -> None:
         super().__init__()
-
-        self.file_watcher = FileWatcher(
-            "/testing/test_files/test.py")
-
-        self.file_watcher.start_watching()
+        self.file_watcher = FileWatcher()
 
     @llm.ai_callable(
-        description="Get the current snapshot of the test file. This returns the file's contents as a string."
+        description="Get the current code from the editor"
     )
-    def get_file_snapshot(self) -> str:
-        """
-        Returns the latest snapshot of the file.
-        It refreshes the snapshot before returning it.
-        """
-        self.file_watcher._take_snapshot()
-        return self.file_watcher.last_snapshot
+    def get_current_code(self) -> str:
+        """Returns the latest code from the editor."""
+        return self.file_watcher.get_current_code()
 
     @llm.ai_callable(
-        description="Force an update of the file snapshot."
+        description="Get the code history"
     )
-    def update_file_snapshot(self) -> str:
+    def get_code_history(self, limit: Optional[int] = None) -> dict:
+        """Returns the history of code changes."""
+        return self.file_watcher.get_code_history(limit)
+
+    @llm.ai_callable(
+        description="Monitor code changes in real-time"
+    )
+    async def monitor_code_changes(self) -> str:
         """
-        Forces an update of the file snapshot by re-reading the file in case agent not 
-        in contempt with a previous possibly incomplete snapshot.
+        Monitors and returns the latest code changes from the editor.
+        Also updates the agent's context with the new code.
         """
-        self.file_watcher._take_snapshot()
-        return self.file_watcher.last_snapshot
+        current_code = self.file_watcher.get_current_code()
+        return f"Current code state:\n```python\n{current_code}\n```"
