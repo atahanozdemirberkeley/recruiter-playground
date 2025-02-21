@@ -25,6 +25,7 @@ class Question:
     solution: str
     test_cases: List[Dict]
     hints: List[str]
+    duration: int
 
     @classmethod
     def from_directory(cls, question_dir: Path) -> 'Question':
@@ -66,7 +67,8 @@ class Question:
                 question=question,
                 solution=solution,
                 test_cases=test_cases,
-                hints=metadata.get('hints', [])
+                hints=metadata.get('hints', []),
+                duration=metadata.get('duration', 0)
             )
 
         except Exception as e:

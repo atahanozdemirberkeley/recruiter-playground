@@ -33,14 +33,6 @@ async def entrypoint(ctx: JobContext):
     interview_controller = InterviewController(question_manager)
     fnc_ctx.interview_controller = interview_controller
 
-    # Add cleanup callback for graceful shutdown
-    async def cleanup():
-        fnc_ctx.file_watcher.stop_watching()
-        console.print("\nCleaning up file watcher...", style="yellow")
-
-    # Register the cleanup function
-    ctx.add_shutdown_callback(cleanup)
-
     try:
         # Interactively select a question
         question_id, prompt_information = question_manager.select_question(
@@ -53,7 +45,6 @@ async def entrypoint(ctx: JobContext):
 
     except KeyboardInterrupt:
         console.print("\nExiting...", style="yellow")
-        await cleanup()  # Ensure cleanup happens on keyboard interrupt
         return
 
 
@@ -90,13 +81,7 @@ async def entrypoint(ctx: JobContext):
     # Start the file watcher
     file_watcher.start_watching()
 
-    # Add file_watcher cleanup to shutdown callbacks
-    ctx.add_shutdown_callback(file_watcher.stop_watching)
-
     agent.start(ctx.room)
-
-    # listen to incoming chat messages, only required if you'd like the agent to
-    # answer incoming messages from Chat
 
     log_queue = asyncio.Queue()
 
@@ -123,9 +108,10 @@ async def entrypoint(ctx: JobContext):
                 text=new_stage_prompt
             )
 
-        # Log interaction
+        # Log interaction with interview duration
+        duration = interview_controller.get_interview_duration()
         log_queue.put_nowait(
-            f"[{datetime.now()}] USER:\n{msg.content}\n\n"
+            f"[{duration}] USER:\n{msg.content}\n\n"
             f"CODE:\n{code_snapshot}\n\n"
             f"STAGE: {interview_controller.state.current_stage.value}\n"
             f"{'='*80}\n\n"
@@ -135,8 +121,9 @@ async def entrypoint(ctx: JobContext):
     def on_agent_speech_committed(msg: llm.ChatMessage):
         # Take a snapshot of the code
         code_snapshot = file_watcher._take_snapshot()
+        duration = interview_controller.get_interview_duration()
         log_queue.put_nowait(
-            f"[{datetime.now()}] AGENT:\n{msg.content}\n\n"
+            f"[{duration}] AGENT:\n{msg.content}\n\n"
             f"CODE :\n{code_snapshot}\n\n"
             f"{'='*80}\n\n"  # Separator for better readability
         )

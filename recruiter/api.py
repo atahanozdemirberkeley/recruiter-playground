@@ -52,7 +52,7 @@ class AssistantFnc(llm.FunctionContext):
         description="Get the duration of a specific interview stage in HH:MM format"
     )
     def get_stage_duration(self, stage: Annotated[str, "The interview stage to get duration for"]) -> str:
-        """Returns the duration of a specific stage in HH:MM:SS format"""
+        """Returns the duration of a specific stage in HH:MM format"""
         try:
             interview_stage = InterviewStage(stage)
             return self.interview_controller.get_stage_duration(interview_stage, formatted=True)

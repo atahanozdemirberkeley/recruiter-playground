@@ -25,16 +25,17 @@ class InterviewStage(Enum):
 class InterviewState:
     question: Question
     current_stage: InterviewStage
-    code_snapshots: Dict[str, str]
+    # {id: {"code": str, "timestamp": int}}
+    code_snapshots: Dict[str, Dict[str, Union[str, int]]]
     clarifications: List[str]
     insights: List[str]
     start_time: Optional[datetime] = None
     stage_timestamps: Dict[InterviewStage, datetime] = {}
-    time_publisher: Optional[asyncio.Queue] = None
     interview_end_time: Optional[datetime] = None
 
 
 class InterviewController:
+
     def __init__(self, question_manager: QuestionManager):
         self.question_manager = question_manager
         self.state = None
@@ -49,10 +50,14 @@ class InterviewController:
         self.state = InterviewState(
             question=question,
             current_stage=InterviewStage.INTRODUCTION,
+            # TODO: Consider removing code_snapshots from here
             code_snapshots={},
             clarifications=[],
-            insights=[]
+            insights=[],
+            start_time=datetime.now(),
+            interview_end_time=datetime.now() + timedelta(minutes=question.duration)
         )
+        self.start_interview_timer(question.duration)
 
     def get_system_prompt(self) -> str:
         return self._generate_stage_prompt()
@@ -241,7 +246,7 @@ class InterviewController:
 
             await asyncio.sleep(1)  # Update every second
 
-    async def start_interview(self, duration_minutes: int):
+    async def start_interview_timer(self, duration_minutes: int):
         """Start the interview with a specified duration"""
         self.state.start_time = datetime.now()
         self.state.interview_end_time = self.state.start_time + \
@@ -249,3 +254,17 @@ class InterviewController:
 
         # Start time updates when interview starts
         asyncio.create_task(self.start_time_updates(self.room))
+
+    def add_code_snapshot(self, code: str) -> str:
+        """
+        Adds a new code snapshot with timestamp relative to interview start
+        Returns: snapshot_id
+        """
+        snapshot_id = f"snapshot_{self.snapshot_counter}"
+        self.snapshot_counter += 1
+
+        self.state.code_snapshots[snapshot_id] = {
+            "code": code,
+            "timestamp": self.get_interview_duration(formatted=False)
+        }
+        return snapshot_id
