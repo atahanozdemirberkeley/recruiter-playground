@@ -1,8 +1,9 @@
 import enum
-from typing import Annotated, Optional
+from typing import Annotated
 from livekit.agents import llm
 import logging
 from components.filewatcher import FileWatcher
+from components.interview_state import InterviewStage
 
 logger = logging.getLogger("api")
 logger.setLevel(logging.INFO)
@@ -11,29 +12,49 @@ logger.setLevel(logging.INFO)
 class AssistantFnc(llm.FunctionContext):
     def __init__(self) -> None:
         super().__init__()
-        self.file_watcher = FileWatcher()
+
+        self.file_watcher = FileWatcher(
+            "/testing/test_files/test.py")
+
+        self.file_watcher.start_watching()
+        self.interview_controller = None  # set from main.py
 
     @llm.ai_callable(
-        description="Get the current code from the editor"
+        description="Get the current snapshot of the test file. This returns the file's contents as a string."
     )
-    def get_current_code(self) -> str:
-        """Returns the latest code from the editor."""
-        return self.file_watcher.get_current_code()
-
-    @llm.ai_callable(
-        description="Get the code history"
-    )
-    def get_code_history(self, limit: Optional[int] = None) -> dict:
-        """Returns the history of code changes."""
-        return self.file_watcher.get_code_history(limit)
-
-    @llm.ai_callable(
-        description="Monitor code changes in real-time"
-    )
-    async def monitor_code_changes(self) -> str:
+    def get_file_snapshot(self) -> str:
         """
-        Monitors and returns the latest code changes from the editor.
-        Also updates the agent's context with the new code.
+        Returns the latest snapshot of the file.
+        It refreshes the snapshot before returning it.
         """
-        current_code = self.file_watcher.get_current_code()
-        return f"Current code state:\n```python\n{current_code}\n```"
+        self.file_watcher._take_snapshot()
+        return self.file_watcher.last_snapshot
+
+    @llm.ai_callable(
+        description="Force an update of the file snapshot."
+    )
+    def update_file_snapshot(self) -> str:
+        """
+        Forces an update of the file snapshot by re-reading the file in case agent not
+        in contempt with a previous possibly incomplete snapshot.
+        """
+        self.file_watcher._take_snapshot()
+        return self.file_watcher.last_snapshot
+
+    @llm.ai_callable(
+        description="Get the current time left for the interview in HH:MM:SS format"
+    )
+    def get_interview_time_left(self) -> str:
+        """Returns the current interview duration in HH:MM:SS format"""
+        return self.interview_controller.get_interview_time_left(formatted=True)
+
+    @llm.ai_callable(
+        description="Get the duration of a specific interview stage in HH:MM:SS format"
+    )
+    def get_stage_duration(self, stage: Annotated[str, "The interview stage to get duration for"]) -> str:
+        """Returns the duration of a specific stage in HH:MM:SS format"""
+        try:
+            interview_stage = InterviewStage(stage)
+            return self.interview_controller.get_stage_duration(interview_stage, formatted=True)
+        except ValueError:
+            return "Invalid stage name"
