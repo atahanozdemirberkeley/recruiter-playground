@@ -238,11 +238,9 @@ export default function Playground({
           )}
         </ConfigurationPanelItem>
 
-        <ConfigurationPanelItem title="Interview">
-          <div className="flex items-center">
-            <InterviewTimer className="text-sm" />
-          </div>
-        </ConfigurationPanelItem>
+        <div className="flex justify-center w-full">
+          <InterviewTimer className="text-lg font-semibold" />
+        </div>
 
         <ConfigurationPanelItem title="Status">
           <div className="flex flex-col gap-2">
