@@ -43,19 +43,33 @@ async def entrypoint(ctx: JobContext):
     # Set the room in the interview controller
     interview_controller.room = ctx.room
 
-    # Subscribe to data messages
-    def handle_data(data):
-        # Extract topic from the data object
-        topic = data.user.topic if hasattr(
-            data, 'user') and hasattr(data.user, 'topic') else None
-        # Extract actual data bytes
-        data_bytes = data.user.data.data if hasattr(
-            data, 'user') and hasattr(data.user, 'data') else None
+    # TODO: create abstraction for data handling
+    # Subscribe to text stream messages
+    async def handle_text_stream(reader, participant_identity):
+        info = reader.info
+        logger.info(f"Receiving text stream from {participant_identity}")
 
-        if data_bytes and topic:
-            interview_controller.get_file_watcher().on_data_received(data_bytes, topic)
+        # Get complete text
+        text = await reader.read_all()
 
-    ctx.room.on("data_received", handle_data)
+        try:
+            decoded = json.loads(text)
+            logger.info(f"Decoded data type: {decoded.get('type')}")
+
+            if decoded.get('type') == 'code_update':
+                code = decoded.get('code', '')
+                interview_controller.get_file_watcher().on_data_received(
+                    text.encode('utf-8'),
+                    "code"
+                )
+                logger.info("Successfully processed code update")
+        except Exception as e:
+            logger.error(f"Error handling text stream: {e}")
+
+    # Register the handler for the "code" topic
+    logger.info("Registering text stream handler for 'code' topic")
+    ctx.room.register_text_stream_handler("code", handle_text_stream)
+    logger.info("Text stream handler registered")
 
     try:
         # Initialize the interview state
