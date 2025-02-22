@@ -5,6 +5,7 @@ from watchdog.events import FileSystemEventHandler
 from livekit.rtc import EventEmitter
 from typing import Callable, Optional
 import logging
+import json
 
 logger = logging.getLogger("filewatcher")
 logger.setLevel(logging.INFO)
@@ -32,8 +33,38 @@ class FileWatcher(EventEmitter):
 
         # Initialize snapshot tracking
         self.last_snapshot = ""
-        self.snapshot_history = {}  # Dictionary to store snapshots with timestamps
-        self.max_history = 100  # Maximum number of snapshots to keep
+        self.snapshot_history = {}
+        self.max_history = 100
+
+        # Ensure the file exists
+        self._ensure_file_exists()
+
+    def _ensure_file_exists(self):
+        """Create the file if it doesn't exist"""
+        os.makedirs(os.path.dirname(self.path_to_watch), exist_ok=True)
+        if not os.path.exists(self.path_to_watch):
+            with open(self.path_to_watch, 'w') as f:
+                f.write('')
+
+    def write_content(self, content: str) -> bool:
+        """
+        Write new content to the file.
+
+        Args:
+            content (str): The content to write to the file
+
+        Returns:
+            bool: True if write was successful, False otherwise
+        """
+        try:
+            with open(self.path_to_watch, 'w') as f:
+                f.write(content)
+            self._take_snapshot()  # Update snapshot after write
+            logger.info("Successfully wrote content to %s", self.path_to_watch)
+            return True
+        except Exception as e:
+            logger.error("Error writing to file %s: %s", self.path_to_watch, e)
+            return False
 
     def _take_snapshot(self):
         """
@@ -181,3 +212,18 @@ class FileWatcher(EventEmitter):
         return (snapshot and
                 snapshot.endswith('\n') and
                 not snapshot.endswith('[WORK IN PROGRESS] """'))
+
+    def on_data_received(self, data: bytes, topic: str):
+        try:
+            logger.info(f"Received data on topic: {topic}")
+            decoded = json.loads(data.decode('utf-8'))
+            logger.info(f"Decoded data type: {decoded.get('type')}")
+            if decoded.get('type') == 'code_update':
+                code = decoded.get('code', '')
+                # Log first 100 chars
+                logger.info(f"Attempting to write code: {code[:100]}...")
+                success = self.write_content(code)
+                logger.info(f"Write success: {success}")
+        except Exception as e:
+            logger.error(
+                f"Error handling data channel message: {e}", exc_info=True)

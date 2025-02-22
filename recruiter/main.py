@@ -30,11 +30,12 @@ logger = logging.getLogger(__name__)
 async def entrypoint(ctx: JobContext):
     # Initialize QuestionManager
     question_manager = QuestionManager(Path("testing/test_files"))
-    fnc_ctx = AssistantFnc()
 
-    # Initialize InterviewController
+    # Initialize InterviewController with FileWatcher
     interview_controller = InterviewController(question_manager)
-    fnc_ctx.interview_controller = interview_controller
+
+    # Initialize AssistantFnc with interview_controller
+    fnc_ctx = AssistantFnc(interview_controller)
 
     # Connect to room
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
@@ -42,13 +43,27 @@ async def entrypoint(ctx: JobContext):
     # Set the room in the interview controller
     interview_controller.room = ctx.room
 
+    # Subscribe to data messages
+    def handle_data(data):
+        # Extract topic from the data object
+        topic = data.user.topic if hasattr(
+            data, 'user') and hasattr(data.user, 'topic') else None
+        # Extract actual data bytes
+        data_bytes = data.user.data.data if hasattr(
+            data, 'user') and hasattr(data.user, 'data') else None
+
+        if data_bytes and topic:
+            interview_controller.get_file_watcher().on_data_received(data_bytes, topic)
+
+    ctx.room.on("data_received", handle_data)
+
     try:
-        # Initialize the interview state (synchronous)
+        # Initialize the interview state
         question_id, prompt_information = question_manager.select_question(
             QUESTION_NUMBER)
         interview_controller.initialize_interview(question_id)
 
-        # Explicitly create and start the timer updates task
+        # Create timer updates task
         asyncio.create_task(interview_controller.start_time_updates(ctx.room))
         logger.info("Timer updates task created")
 
@@ -68,10 +83,6 @@ async def entrypoint(ctx: JobContext):
         text=formatted_prompt
     )
 
-    # Initialize FileWatcher
-    file_watcher = FileWatcher(
-        "testing/test.py")
-
     agent = VoicePipelineAgent(
         vad=silero.VAD.load(),
         stt=openai.STT(),
@@ -82,7 +93,7 @@ async def entrypoint(ctx: JobContext):
     )
 
     # Start the file watcher
-    file_watcher.start_watching()
+    interview_controller.file_watcher.start_watching()
 
     agent.start(ctx.room)
 
@@ -99,7 +110,7 @@ async def entrypoint(ctx: JobContext):
             )
 
         # Take code snapshot
-        code_snapshot = file_watcher._take_snapshot()
+        code_snapshot = interview_controller.file_watcher._take_snapshot()
         interview_controller.state.code_snapshots[str(
             len(interview_controller.state.code_snapshots))] = code_snapshot
 
@@ -123,7 +134,7 @@ async def entrypoint(ctx: JobContext):
     @agent.on("agent_speech_committed")
     def on_agent_speech_committed(msg: llm.ChatMessage):
         # Take a snapshot of the code
-        code_snapshot = file_watcher._take_snapshot()
+        code_snapshot = interview_controller.file_watcher._take_snapshot()
         duration = interview_controller.get_interview_time_since_start()
         log_queue.put_nowait(
             f"[{duration}] AGENT:\n{msg.content}\n\n"

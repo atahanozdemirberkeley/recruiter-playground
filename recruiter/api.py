@@ -3,21 +3,17 @@ from typing import Annotated
 from livekit.agents import llm
 import logging
 from components.filewatcher import FileWatcher
-from components.interview_state import InterviewStage
+from components.interview_state import InterviewStage, InterviewController
 
 logger = logging.getLogger("api")
 logger.setLevel(logging.INFO)
 
 
 class AssistantFnc(llm.FunctionContext):
-    def __init__(self) -> None:
+    def __init__(self, interview_controller: InterviewController) -> None:
         super().__init__()
-
-        self.file_watcher = FileWatcher(
-            "testing/test.py")
-
-        self.file_watcher.start_watching()
-        self.interview_controller = None  # set from main.py
+        self.interview_controller = interview_controller
+        self.file_watcher = interview_controller.get_file_watcher()
 
     @llm.ai_callable(
         description="Get the current snapshot of the test file. This returns the file's contents as a string."
