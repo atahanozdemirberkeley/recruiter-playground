@@ -16,6 +16,19 @@ export const InterviewTimer = ({ className }: InterviewTimerProps) => {
     return timeString;
   };
 
+  const getTimeStyles = (timeString: string) => {
+    const [hours, minutes, seconds] = timeString.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + seconds / 60;
+    
+    if (totalMinutes <= 3) {
+      return 'text-red-500 animate-pulse';
+    }
+    if (totalMinutes <= 5) {
+      return 'text-red-500';
+    }
+    return '';
+  };
+
   const handleTimeUpdate = (msg: any) => {
     if (msg.topic === 'interview-time') {
       try {
@@ -37,7 +50,9 @@ export const InterviewTimer = ({ className }: InterviewTimerProps) => {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="text-gray-500">Time Remaning:</span>
-      <span className="font-mono">{formatTimeDisplay(timeLeft)}</span>
+      <span className={`font-mono ${getTimeStyles(timeLeft)}`}>
+        {formatTimeDisplay(timeLeft)}
+      </span>
     </div>
   );
 }; 
