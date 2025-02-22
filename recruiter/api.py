@@ -1,5 +1,5 @@
 import enum
-from typing import Annotated
+from typing import Annotated, Optional
 from livekit.agents import llm
 import logging
 from components.filewatcher import FileWatcher
@@ -20,20 +20,16 @@ class AssistantFnc(llm.FunctionContext):
         self.interview_controller = None  # set from main.py
 
     @llm.ai_callable(
-        description="Get the current snapshot of the test file. This returns the file's contents as a string."
+        description="Get the code history"
     )
-    def get_file_snapshot(self) -> str:
-        """
-        Returns the latest snapshot of the file.
-        It refreshes the snapshot before returning it.
-        """
-        self.file_watcher._take_snapshot()
-        return self.file_watcher.last_snapshot
+    def get_code_history(self, limit: Optional[int] = None) -> dict:
+        """Returns the history of code changes."""
+        return self.file_watcher.get_code_history(limit)
 
     @llm.ai_callable(
-        description="Force an update of the file snapshot."
+        description="Monitor code changes in real-time"
     )
-    def update_file_snapshot(self) -> str:
+    async def monitor_code_changes(self) -> str:
         """
         Forces an update of the file snapshot by re-reading the file in case agent not
         in contempt with a previous possibly incomplete snapshot.

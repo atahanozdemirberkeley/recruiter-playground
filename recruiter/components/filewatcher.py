@@ -11,7 +11,7 @@ logger.setLevel(logging.INFO)
 
 
 class FileWatcher(EventEmitter):
-    def __init__(self, path_to_watch):
+    def __init__(self):
         """
         FileWatcher is a foundational agent function that allows the AI
         to access a snapshot of a file's contents. It supports:
@@ -25,140 +25,48 @@ class FileWatcher(EventEmitter):
         a codebase file), which is critical if the file might be in mid-edit.
         """
         super().__init__()
-        self.path_to_watch = path_to_watch
-        self.observer = Observer()
-        self.event_handler = None
-        self._last_modified = {}
+        self.current_code = ""
+        self.code_history = {}  # Dictionary to store code snapshots with timestamps
+        self.max_history = 100
 
-        # Initialize snapshot tracking
-        self.last_snapshot = ""
-        self.snapshot_history = {}  # Dictionary to store snapshots with timestamps
-        self.max_history = 100  # Maximum number of snapshots to keep
+    def update_code(self, code: str):
+        """Update the current code and store in history"""
+        current_time = time.time()
+        self.current_code = code
+        logger.info(f"Code updated: {code[:100]}...")  # Log first 100 chars
+        
+        # Add to history with timestamp
+        self.code_history[current_time] = {
+            'content': code,
+            'timestamp': current_time,
+            'is_complete': True  # Since we're getting complete updates from editor
+        }
+        
+        # Trim history if it exceeds max size
+        if len(self.code_history) > self.max_history:
+            oldest_key = min(self.code_history.keys())
+            del self.code_history[oldest_key]
+            
+        # Emit an event that code has been updated
+        self.emit('code_updated', code)
 
-    def _take_snapshot(self):
-        """
-        Internal helper to read the file contents.
-        Updates the last_snapshot attribute and stores in history with timestamp.
-        Marks incomplete snapshots with [WORK IN PROGRESS] tag.
-        """
-        try:
-            with open(self.path_to_watch, "r") as f:
-                current_content = f.read()
-
-                # Check if snapshot appears incomplete
-                if current_content and not current_content.endswith('\n'):
-                    current_content += '\n""" [WORK IN PROGRESS] """'
-
-                current_time = time.time()
-
-                # Update last snapshot
-                self.last_snapshot = current_content
-
-                # Add to history with timestamp
-                self.snapshot_history[current_time] = {
-                    'content': current_content,
-                    'timestamp': current_time,
-                    'is_complete': current_content.endswith('\n') and not current_content.endswith('[WORK IN PROGRESS] """')
-                }
-
-                # Trim history if it exceeds max size
-                if len(self.snapshot_history) > self.max_history:
-                    oldest_key = min(self.snapshot_history.keys())
-                    del self.snapshot_history[oldest_key]
-
-                logger.info("File snapshot updated for %s", self.path_to_watch)
-
-        except Exception as e:
-            logger.error("Error reading file %s: %s", self.path_to_watch, e)
-            self.last_snapshot = ""
-
-        return self.last_snapshot
-
-    def get_snapshot_history(self, limit: Optional[int] = None) -> dict:
-        """
-        Get the history of file snapshots.
-
-        Args:
-            limit (Optional[int]): Maximum number of recent snapshots to return
-
-        Returns:
-            dict: Dictionary of timestamps and their corresponding snapshots
-        """
+    def get_current_code(self) -> str:
+        """Get the current code content"""
+        return self.current_code
+    
+    def get_code_history(self, limit: Optional[int] = None) -> dict:
+        """Get the history of code changes"""
         if not limit:
-            return self.snapshot_history
-
+            return self.code_history
+            
         # Get the most recent 'limit' snapshots
-        sorted_times = sorted(self.snapshot_history.keys(), reverse=True)
+        sorted_times = sorted(self.code_history.keys(), reverse=True)
         recent_times = sorted_times[:limit]
-
+        
         return {
-            time: self.snapshot_history[time]
+            time: self.code_history[time]
             for time in recent_times
         }
-
-    def get_snapshot_at_time(self, timestamp: float) -> Optional[str]:
-        """
-        Get a specific snapshot by timestamp.
-
-        Args:
-            timestamp (float): The timestamp of the desired snapshot
-
-        Returns:
-            Optional[str]: The snapshot content if found, None otherwise
-        """
-        snapshot = self.snapshot_history.get(timestamp)
-        return snapshot['content'] if snapshot else None
-
-    def start_watching(self, callback: Optional[Callable] = None):
-        """Start watching the specified path for changes.
-
-        Args:
-            callback (callable): Function to call when a file is saved
-        """
-        class CustomHandler(FileSystemEventHandler):
-            def __init__(self, callback=None):
-                super().__init__()
-                self._callback = callback
-
-            def on_modified(self, event):
-                if not event.is_directory:
-                    try:
-                        if self._callback:
-                            self._callback(event.src_path)
-                    except Exception as e:
-                        print(f"Error in file change callback: {e}")
-
-        self.event_handler = CustomHandler(callback)
-        self.observer.schedule(
-            self.event_handler,
-            path=os.path.dirname(self.path_to_watch) if os.path.isfile(
-                self.path_to_watch) else self.path_to_watch,
-            recursive=False
-        )
-        self.observer.start()
-
-    def stop_watching(self):
-        """Stop watching for file changes and reset the target file."""
-        if self.observer:
-            self.observer.stop()
-            # Reset the observer and event handler
-            self.event_handler = None
-
-            # Reset the contents of the target file
-            try:
-                with open(self.path_to_watch, 'w') as f:
-                    f.write('')
-            except IOError as e:
-                print(f"Error resetting file contents: {e}")
-
-    def get_current_file(self):
-        """Get the current file contents."""
-        try:
-            with open(self.path_to_watch, 'r') as f:
-                return f.read()
-        except IOError as e:
-            print(f"Error reading file: {e}")
-            return None
 
     def __enter__(self):
         """Context manager entry point."""
@@ -166,7 +74,7 @@ class FileWatcher(EventEmitter):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit point."""
-        self.stop_watching()
+        pass
 
     def is_snapshot_complete(self, snapshot: str) -> bool:
         """

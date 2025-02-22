@@ -29,6 +29,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import tailwindTheme from "src/lib/tailwindTheme.preval";
 import { InterviewTimer } from "src/components/timer/InterviewTimer";
+import { Button } from "src/components/button/Button";
+import { CodeEditor } from "../codeEditor/CodeEditor";
 
 export interface PlaygroundMeta {
   name: string;
@@ -51,6 +53,7 @@ export default function Playground({
   const { config, setUserSettings } = useConfig();
   const { name } = useRoomInfo();
   const [transcripts, setTranscripts] = useState<ChatMessageType[]>([]);
+  const [userCode, setUserCode] = useState<string>("");
   const { localParticipant } = useLocalParticipant();
 
   const voiceAssistant = useVoiceAssistant();
@@ -83,10 +86,9 @@ export default function Playground({
 
   const onDataReceived = useCallback(
     (msg: any) => {
+      const decoded = JSON.parse(new TextDecoder("utf-8").decode(msg.payload));
+
       if (msg.topic === "transcription") {
-        const decoded = JSON.parse(
-          new TextDecoder("utf-8").decode(msg.payload)
-        );
         let timestamp = new Date().getTime();
         if ("timestamp" in decoded && decoded.timestamp > 0) {
           timestamp = decoded.timestamp;
@@ -100,9 +102,11 @@ export default function Playground({
             isSelf: true,
           },
         ]);
+      } else if (decoded.type === "question_text") {
+        setUserCode(decoded.text);
       }
     },
-    [transcripts]
+    [transcripts, setUserCode, userCode]
   );
 
   useDataChannel(onDataReceived);
@@ -391,8 +395,6 @@ export default function Playground({
     <>
       <PlaygroundHeader
         title={config.title}
-        logo={logo}
-        githubLink={config.github_link}
         height={headerHeight}
         accentColor={config.settings.theme_color}
         connectionState={roomState}
@@ -400,56 +402,46 @@ export default function Playground({
           onConnect(roomState === ConnectionState.Disconnected)
         }
       />
-      <div
-        className={`flex gap-4 py-4 grow w-full selection:bg-${config.settings.theme_color}-900`}
-        style={{ height: `calc(100% - ${headerHeight}px)` }}
-      >
-        <div className="flex flex-col grow basis-1/2 gap-4 h-full lg:hidden">
-          <PlaygroundTabbedTile
-            className="h-full"
-            tabs={mobileTabs}
-            initialTab={mobileTabs.length - 1}
-          />
+      <div className="flex gap-4 py-4 grow w-full">
+        {/* Left Side - Code Editor */}
+        <div className="flex flex-col basis-1/2 gap-4 h-full">
+          <PlaygroundTile title="Problem" className="w-full h-full">
+            <CodeEditor
+              value={userCode}
+              onChange={(code) => setUserCode(code)}
+              language="python"
+              theme="vs-dark"
+              placeholder="Write your solution here..."
+            />
+          </PlaygroundTile>
         </div>
-        <div
-          className={`flex-col grow basis-1/2 gap-4 h-full hidden lg:${
-            !config.settings.outputs.audio && !config.settings.outputs.video
-              ? "hidden"
-              : "flex"
-          }`}
-        >
-          {config.settings.outputs.video && (
+
+        {/* Middle - Audio & Chat */}
+        <div className="flex flex-col basis-[30%] gap-4 h-full">
+          <PlaygroundTile
+            title="Audio"
+            className="w-full h-1/4"
+            childrenClassName="justify-center"
+          >
+            {audioTileContent}
+          </PlaygroundTile>
+
+          {config.settings.chat && (
             <PlaygroundTile
-              title="Video"
-              className="w-full h-full grow"
+              title="Interview Chat"
+              className="w-full h-3/4"
               childrenClassName="justify-center"
             >
-              {videoTileContent}
-            </PlaygroundTile>
-          )}
-          {config.settings.outputs.audio && (
-            <PlaygroundTile
-              title="Audio"
-              className="w-full h-full grow"
-              childrenClassName="justify-center"
-            >
-              {audioTileContent}
+              {chatTileContent}
             </PlaygroundTile>
           )}
         </div>
 
-        {config.settings.chat && (
-          <PlaygroundTile
-            title="Chat"
-            className="h-full grow basis-1/4 hidden lg:flex"
-          >
-            {chatTileContent}
-          </PlaygroundTile>
-        )}
+        {/* Right Side - Settings & Info */}
         <PlaygroundTile
           padding={false}
           backgroundColor="gray-950"
-          className="h-full w-full basis-1/4 items-start overflow-y-auto hidden max-w-[480px] lg:flex"
+          className="h-full basis-1/5 items-start overflow-y-auto flex"
           childrenClassName="h-full grow items-start"
         >
           {settingsTileContent}
