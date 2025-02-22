@@ -17,7 +17,6 @@ from components.interview_state import InterviewState, InterviewController
 from utils.template_utils import load_template
 import os
 import logging
-import logging
 
 
 console = Console()
@@ -129,26 +128,8 @@ async def entrypoint(ctx: JobContext):
         log_queue.put_nowait(
             f"[{duration}] AGENT:\n{msg.content}\n\n"
             f"CODE :\n{code_snapshot}\n\n"
-            f"{'='*80}\n\n"
+            f"{'='*80}\n\n"  # Separator for better readability
         )
-
-    @agent.on("data_received")
-    def on_data_received(data: bytes):
-        try:
-            decoded = json.loads(data.decode('utf-8'))
-            if decoded['type'] == 'code_update':
-                # Update FileWatcher with new code
-                fnc_ctx.file_watcher.update_code(decoded['code'])
-                logger.info("Code updated in FileWatcher")
-                
-                # Update agent's context with new code
-                code_snapshot = fnc_ctx.file_watcher.get_current_code()
-                agent.chat_ctx.append(
-                    role="system",
-                    text=f"Current code state:\n```python\n{code_snapshot}\n```"
-                )
-        except Exception as e:
-            logger.error(f"Error handling data: {e}")
 
     async def write_transcription():
         async with async_open("transcriptions.log", "w") as f:
