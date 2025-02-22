@@ -85,6 +85,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+transcriptions.log
 
 # Virtual Environment
 recruiter/new/

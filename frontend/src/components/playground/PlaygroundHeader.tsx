@@ -6,9 +6,7 @@ import { ConnectionState } from "livekit-client";
 import { ReactNode } from "react";
 
 type PlaygroundHeader = {
-  logo?: ReactNode;
   title?: ReactNode;
-  githubLink?: string;
   height: number;
   accentColor: string;
   connectionState: ConnectionState;
@@ -16,9 +14,7 @@ type PlaygroundHeader = {
 };
 
 export const PlaygroundHeader = ({
-  logo,
   title,
-  githubLink,
   accentColor,
   height,
   onConnectClicked,
@@ -33,23 +29,11 @@ export const PlaygroundHeader = ({
       }}
     >
       <div className="flex items-center gap-3 basis-2/3">
-        <div className="flex lg:basis-1/2">
-          <a href="https://livekit.io">{logo ?? <LKLogo />}</a>
-        </div>
-        <div className="lg:basis-1/2 lg:text-center text-xs lg:text-base lg:font-semibold text-white">
+        <div className="lg:text-left text-xl lg:text-2xl font-semibold text-white">
           {title}
         </div>
       </div>
       <div className="flex basis-1/3 justify-end items-center gap-2">
-        {githubLink && (
-          <a
-            href={githubLink}
-            target="_blank"
-            className={`text-white hover:text-white/80`}
-          >
-            <GithubSVG />
-          </a>
-        )}
         {config.settings.editable && <SettingsDropdown />}
         <Button
           accentColor={

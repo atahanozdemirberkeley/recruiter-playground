@@ -9,6 +9,7 @@ type PlaygroundTileProps = {
   childrenClassName?: string;
   padding?: boolean;
   backgroundColor?: string;
+  actions?: ReactNode;
 };
 
 export type PlaygroundTab = {
@@ -28,27 +29,33 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
   childrenClassName,
   padding = true,
   backgroundColor = "transparent",
+  actions,
 }) => {
   const contentPadding = padding ? 4 : 0;
   return (
     <div
-      className={`flex flex-col border rounded-sm border-gray-800 text-gray-500 bg-${backgroundColor} ${className}`}
+      className={`flex flex-col ${className} ${
+        title === "Problem"
+          ? "bg-[#1a1a1a] rounded-lg overflow-hidden shadow-lg" // LeetCode-style container
+          : `border rounded-sm border-gray-800 text-gray-500 bg-${backgroundColor}`
+      }`}
     >
       {title && (
         <div
-          className="flex items-center justify-center text-xs uppercase py-2 border-b border-b-gray-800 tracking-wider"
-          style={{
-            height: `${titleHeight}px`,
-          }}
+          className={`flex items-center ${
+            title === "Problem"
+              ? "bg-[#282828] px-5 py-4 text-[#eff1f6] text-base border-b border-[#3c3c3c]" // LeetCode-style header
+              : "justify-center text-xs uppercase py-2 px-4 border-b border-gray-800 tracking-wider"
+          }`}
         >
-          <h2>{title}</h2>
+          <h2 className={title === "Problem" ? "font-medium" : ""}>{title}</h2>
+          {actions && <div className="flex items-center">{actions}</div>}
         </div>
       )}
       <div
-        className={`flex flex-col items-center grow w-full ${childrenClassName}`}
+        className={`flex flex-col grow w-full ${childrenClassName}`}
         style={{
-          height: `calc(100% - ${title ? titleHeight + "px" : "0px"})`,
-          padding: `${contentPadding * 4}px`,
+          padding: title === "Problem" ? "0" : `${contentPadding * 4}px`,
         }}
       >
         {children}
@@ -66,7 +73,7 @@ export const PlaygroundTabbedTile: React.FC<PlaygroundTabbedTileProps> = ({
 }) => {
   const contentPadding = 4;
   const [activeTab, setActiveTab] = useState(initialTab);
-  if(activeTab >= tabs.length) {
+  if (activeTab >= tabs.length) {
     return null;
   }
   return (
