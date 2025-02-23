@@ -2,7 +2,6 @@ import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
-
 from aiofile import async_open
 from api import AssistantFnc
 from dotenv import load_dotenv
@@ -49,11 +48,6 @@ async def entrypoint(ctx: JobContext):
     # Initialize DataUtils
     data_utils = DataUtils(interview_controller)
 
-    # 2) Attach an event listener for data packets
-    @ctx.room.on("data_received")
-    def handle_data_received(packet: DataPacket):
-        asyncio.create_task(data_utils.process_data_packet(packet))
-
     try:
         # Initialize the interview state
         question_id, prompt_information = question_manager.select_question(
@@ -97,6 +91,8 @@ async def entrypoint(ctx: JobContext):
 
     agent.start(ctx.room)
 
+    ########### START EVENT LISTENERS ###########
+
     @agent.on("user_speech_committed")
     def on_user_speech_committed(msg: llm.ChatMessage):
         asyncio.create_task(data_utils.handle_user_speech(msg))
@@ -105,9 +101,16 @@ async def entrypoint(ctx: JobContext):
     def on_agent_speech_committed(msg: llm.ChatMessage):
         asyncio.create_task(data_utils.handle_agent_speech(msg))
 
+    # 2) Attach an event listener for data packets
+    @ctx.room.on("data_received")
+    def handle_data_received(packet: DataPacket):
+        asyncio.create_task(data_utils.process_data_packet(packet))
+
     write_task = asyncio.create_task(data_utils.write_transcription())
 
     ctx.add_shutdown_callback(data_utils.finish_queue)
+
+    ########### END EVENT LISTENERS ###########
 
     await agent.say("Hey, welcome to our interview. Are you ready to start?",
                     allow_interruptions=True)

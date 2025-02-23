@@ -76,9 +76,10 @@ class FileWatcher(EventEmitter):
             with open(self.path_to_watch, "r") as f:
                 current_content = f.read()
 
-                # Check if snapshot appears incomplete
-                if current_content and not current_content.endswith('\n'):
-                    current_content += '\n""" [WORK IN PROGRESS] """'
+                # TODO: Experimenting with removing WIP detection
+                # # Check if snapshot appears incomplete
+                # if current_content and not current_content.endswith('\n'):
+                #     current_content += '\n""" [WORK IN PROGRESS] """'
 
                 current_time = time.time()
 
