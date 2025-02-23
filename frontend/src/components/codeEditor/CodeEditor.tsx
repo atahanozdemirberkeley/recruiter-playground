@@ -1,6 +1,5 @@
 import Editor, { Monaco } from "@monaco-editor/react";
 import { useEffect, useRef, useCallback } from "react";
-import { ConnectionState } from "../../types/ConnectionState";
 
 interface CodeEditorProps {
   value: string;
