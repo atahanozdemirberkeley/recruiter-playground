@@ -1,4 +1,4 @@
-[4] AGENT:
+[7] AGENT:
 Hey, welcome to our interview. Are you ready to start?
 
 CODE :
@@ -7,36 +7,12 @@ CODE :
 ================================================================================
 
 [18] USER:
-Yes, I am ready to start and I even made some progress. Can we discuss over it?
+I couldn't be sure. There was a lady in Ankara under him.
 
 CODE:
-
-
-STAGE: introduction
-================================================================================
-
-[24] AGENT:
-Great! Let's take a look at your current progress. Please explain your overall strategy for solving the "Two Sum" problem. What approach are you taking?
-
-CODE :
-
-
-================================================================================
-
-[42] USER:
-So, can you comment on the current code? that I have so far.
-
-CODE:
-
+def test()
+""" [WORK IN PROGRESS] """
 
 STAGE: introduction
-================================================================================
-
-[44] AGENT:
-It seems that I don't yet have a view of your complete code. Let me check once again.
-
-CODE :
-
-
 ================================================================================
 

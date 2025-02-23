@@ -17,6 +17,8 @@ from components.interview_state import InterviewState, InterviewController
 from utils.template_utils import load_template
 import os
 import logging
+from livekit.rtc import DataPacket
+from components.utils.data_utils import DataUtils
 
 
 console = Console()
@@ -28,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 async def entrypoint(ctx: JobContext):
+
     # Initialize QuestionManager
     question_manager = QuestionManager(Path("testing/test_files"))
 
@@ -43,33 +46,13 @@ async def entrypoint(ctx: JobContext):
     # Set the room in the interview controller
     interview_controller.room = ctx.room
 
-    # TODO: create abstraction for data handling
-    # Subscribe to text stream messages
-    async def handle_text_stream(reader, participant_identity):
-        info = reader.info
-        logger.info(f"Receiving text stream from {participant_identity}")
+    # Initialize DataUtils
+    data_utils = DataUtils(interview_controller)
 
-        # Get complete text
-        text = await reader.read_all()
-
-        try:
-            decoded = json.loads(text)
-            logger.info(f"Decoded data type: {decoded.get('type')}")
-
-            if decoded.get('type') == 'code_update':
-                code = decoded.get('code', '')
-                interview_controller.get_file_watcher().on_data_received(
-                    text.encode('utf-8'),
-                    "code"
-                )
-                logger.info("Successfully processed code update")
-        except Exception as e:
-            logger.error(f"Error handling text stream: {e}")
-
-    # Register the handler for the "code" topic
-    logger.info("Registering text stream handler for 'code' topic")
-    ctx.room.register_text_stream_handler("code", handle_text_stream)
-    logger.info("Text stream handler registered")
+    # 2) Attach an event listener for data packets
+    @ctx.room.on("data_received")
+    def handle_data_received(packet: DataPacket):
+        asyncio.create_task(data_utils.process_data_packet(packet))
 
     try:
         # Initialize the interview state
@@ -106,74 +89,32 @@ async def entrypoint(ctx: JobContext):
         fnc_ctx=fnc_ctx,
     )
 
+    # Update data_utils with agent reference
+    data_utils.agent = agent
+
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
 
     agent.start(ctx.room)
 
-    log_queue = asyncio.Queue()
-
     @agent.on("user_speech_committed")
     def on_user_speech_committed(msg: llm.ChatMessage):
-        asyncio.create_task(async_handle_speech(msg))
-
-    async def async_handle_speech(msg: llm.ChatMessage):
-        if isinstance(msg.content, list):
-            msg.content = "\n".join(
-                "[image]" if isinstance(x, llm.ChatImage) else x for x in msg
-            )
-
-        # Take code snapshot
-        code_snapshot = interview_controller.file_watcher._take_snapshot()
-        interview_controller.state.code_snapshots[str(
-            len(interview_controller.state.code_snapshots))] = code_snapshot
-
-        # Only update agent context if stage changes
-        new_stage_prompt = await interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
-        if new_stage_prompt:
-            agent.chat_ctx.append(
-                role="system",
-                text=new_stage_prompt
-            )
-
-        # Log interaction with interview duration
-        duration = interview_controller.get_interview_time_since_start()
-        log_queue.put_nowait(
-            f"[{duration}] USER:\n{msg.content}\n\n"
-            f"CODE:\n{code_snapshot}\n\n"
-            f"STAGE: {interview_controller.state.current_stage.value}\n"
-            f"{'='*80}\n\n"
-        )
+        asyncio.create_task(data_utils.handle_user_speech(msg))
 
     @agent.on("agent_speech_committed")
     def on_agent_speech_committed(msg: llm.ChatMessage):
-        # Take a snapshot of the code
-        code_snapshot = interview_controller.file_watcher._take_snapshot()
-        duration = interview_controller.get_interview_time_since_start()
-        log_queue.put_nowait(
-            f"[{duration}] AGENT:\n{msg.content}\n\n"
-            f"CODE :\n{code_snapshot}\n\n"
-            f"{'='*80}\n\n"  # Separator for better readability
-        )
+        asyncio.create_task(data_utils.handle_agent_speech(msg))
 
-    async def write_transcription():
-        async with async_open("transcriptions.log", "w") as f:
-            while True:
-                msg = await log_queue.get()
-                if msg is None:
-                    break
-                await f.write(msg)
+    write_task = asyncio.create_task(data_utils.write_transcription())
 
-    write_task = asyncio.create_task(write_transcription())
-
-    async def finish_queue():
-        log_queue.put_nowait(None)
-        await write_task
-
-    ctx.add_shutdown_callback(finish_queue)
+    ctx.add_shutdown_callback(data_utils.finish_queue)
 
     await agent.say("Hey, welcome to our interview. Are you ready to start?",
                     allow_interruptions=True)
+
+    # Keep the agent running
+    while True:
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
     try:
