@@ -86,7 +86,10 @@ wheels/
 .installed.cfg
 *.egg
 transcriptions.log
-recruiter/transcriptions.log
+**/transcriptions.log
+**/recruiter/transcriptions.log
+**/*.log
+**/test.py
 
 # Virtual Environment
 recruiter/new/
@@ -95,6 +98,9 @@ ENV/
 env/
 .env
 .venv
+prompts/
+**/prompts
+
 
 # IDE
 .idea/

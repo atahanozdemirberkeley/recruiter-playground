@@ -3,10 +3,8 @@ from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 import yaml
 import logging
-from utils.template_utils import load_template
+from utils.template_utils import load_template, save_prompt
 from rich.console import Console
-from rich.table import Table
-from rich.prompt import Prompt, IntPrompt
 import sys
 
 logger = logging.getLogger("question_manager")
@@ -125,7 +123,7 @@ class QuestionManager:
             raise ValueError(f"Question {question_id} not found")
 
         template = load_template('template_question_context')
-        return template.format(
+        formatted_prompt = template.format(
             title=question.title,
             difficulty=question.difficulty,
             category=question.category,
@@ -134,6 +132,10 @@ class QuestionManager:
             hints=chr(10).join(f"- {hint}" for hint in question.hints),
             solution=question.solution
         )
+
+        save_prompt("question_context", formatted_prompt)
+
+        return formatted_prompt
 
     def get_solution(self, question_id: str) -> Optional[str]:
         """Get the solution for a specific question (for verification only)."""

@@ -1,0 +1,4 @@
+Focus: Present the problem clearly and confirm understanding
+    Key Questions:
+    - Would you like me to clarify any part of the problem?
+    - Could you rephrase the problem in your own words?

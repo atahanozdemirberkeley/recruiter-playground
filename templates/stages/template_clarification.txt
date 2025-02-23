@@ -1,0 +1,4 @@
+Focus: Encourage and address clarifying questions
+    Key Questions:
+    - What assumptions are you making about the input?
+    - Have you considered edge cases?
