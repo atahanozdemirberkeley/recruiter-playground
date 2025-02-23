@@ -389,29 +389,26 @@ export default function Playground({
     ),
   });
 
-  // Add debounced code update function
-  const sendCodeUpdate = useCallback(
-    (code: string) => {
-      if (roomState === ConnectionState.Connected && localParticipant) {
-        const payload = {
-          type: "code_update",
-          code: code,
-          timestamp: new Date().getTime()
-        };
-        localParticipant.publishData(
-          new TextEncoder().encode(JSON.stringify(payload)),
-          { topic: "code" }
-        );
-      }
-    },
-    [localParticipant, roomState]
-  );
 
   // Update the code editor onChange handler
-  const handleCodeChange = useCallback((code: string) => {
-    setUserCode(code);
-    sendCodeUpdate(code);
-  }, [sendCodeUpdate]);
+  const handleCodeChange = useCallback((newCode: string) => {
+    setUserCode(newCode);
+    console.log("Code changed:", newCode);
+
+    if (roomState === ConnectionState.Connected && localParticipant) {
+      const payload = {
+        type: "code_update",
+        code: newCode,
+        timestamp: Date.now(),
+      };
+      console.log("Publishing code update:", payload);
+
+      localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify(payload)),
+        { topic: "code" }
+      );
+    }
+  }, [localParticipant, roomState]);
 
   return (
     <>
