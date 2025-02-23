@@ -1,2 +1,3 @@
-def twoSum(hello):
-    return hello
+def test(x):
+
+    retirn x 
