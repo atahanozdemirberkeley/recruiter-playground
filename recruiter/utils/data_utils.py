@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataUtils:
-    def __init__(self, interview_controller, agent=None, log_file_path="recruiter/transcriptions.log"):
+    def __init__(self, interview_controller, agent=None, log_file_path="transcriptions.log"):
         self.interview_controller = interview_controller
         self.agent = agent
         self.log_queue = asyncio.Queue()
