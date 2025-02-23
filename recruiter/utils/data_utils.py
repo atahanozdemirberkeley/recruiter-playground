@@ -20,8 +20,6 @@ class DataUtils:
 
     async def process_data_packet(self, packet: DataPacket) -> None:
         """Process incoming data packets from the room."""
-        logger.info(
-            f"Got data. topic={packet.topic}, from={packet.participant.identity}")
 
         try:
             payload_str = packet.data.decode("utf-8")
@@ -29,7 +27,7 @@ class DataUtils:
 
             if payload.get("type") == "code_update":
                 code_text = payload.get("code", "")
-                logger.info(f"Code update: {code_text[:50]}...")
+
                 self.interview_controller.file_watcher.write_content(code_text)
 
         except json.JSONDecodeError:
@@ -63,7 +61,6 @@ class DataUtils:
             f"STAGE: {self.interview_controller.state.current_stage.value}\n"
             f"{'='*80}\n\n"
         )
-        logger.debug("Successfully queued user speech message")
 
     async def handle_agent_speech(self, msg: llm.ChatMessage) -> None:
         """Handle agent speech events."""
