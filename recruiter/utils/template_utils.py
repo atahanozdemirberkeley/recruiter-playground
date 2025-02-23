@@ -78,10 +78,16 @@ def save_prompt(prompt_name: str, content: str, project_root: Optional[str] = No
 
         prompt_path = os.path.join(prompts_dir, prompt_name)
 
-        with open(prompt_path, 'w') as f:
-            f.write(content)
+        if not os.path.exists(prompts_dir):
+            os.makedirs(prompts_dir)
 
-        logger.info(f"Successfully wrote prompt to: {prompt_path}")
+        # Check if the prompt file exists, create if it doesn't
+        if not os.path.exists(prompt_path):
+            with open(prompt_path, 'w') as f:
+                f.write(content)
+
+        else:
+            logger.info(f"Prompt file already exists: {prompt_path}")
 
     except Exception as e:
         logger.error(f"Error writing prompt: {str(e)}")
