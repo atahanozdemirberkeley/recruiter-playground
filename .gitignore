@@ -89,6 +89,7 @@ transcriptions.log
 **/transcriptions.log
 **/recruiter/transcriptions.log
 **/*.log
+**/test.py
 
 # Virtual Environment
 recruiter/new/
