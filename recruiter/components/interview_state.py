@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Union
 from components.question_manager import QuestionManager, Question
 import json
-from utils.template_utils import load_template
+from utils.template_utils import load_template, save_prompt
 from livekit.plugins.openai import LLM
 from livekit.agents import llm
 from datetime import datetime, timedelta
@@ -22,6 +22,23 @@ class InterviewStage(Enum):
     CODE_REVIEW = "code_review"
     OPTIMIZATION = "optimization"
     CONCLUSION = "conclusion"
+
+    def get_stage_prompt(self) -> str:
+        """
+        Load the stage-specific prompt from templates/stages/template_{stage_name}.txt
+        
+        Returns:
+            str: The stage-specific instructions and questions
+        """
+        try:
+            template_path = f"templates/stages/template_{self.value}"
+            return load_template(template_path)
+        except FileNotFoundError:
+            logger.error(f"Stage template not found for {self.value}")
+            # Return default instructions if template not found
+            return """
+    Focus: Continue with the interview process
+    """
 
 
 @dataclass
@@ -83,58 +100,14 @@ class InterviewController:
         #     self.state.clarifications.append(llm_response["record"]["content"])
 
     def _generate_stage_prompt(self) -> str:
-        stage_instructions = {
-            InterviewStage.INTRODUCTION: """
-    Focus: Make the candidate comfortable and set expectations
-    Key Questions:
-    - Are you ready to begin the technical interview?
-    - Would you like me to explain the interview process?""",
-
-            InterviewStage.PROBLEM_PRESENTATION: """
-    Focus: Present the problem clearly and confirm understanding
-    Key Questions:
-    - Would you like me to clarify any part of the problem?
-    - Could you rephrase the problem in your own words?""",
-
-            InterviewStage.CLARIFICATION: """
-    Focus: Encourage and address clarifying questions
-    Key Questions:
-    - What assumptions are you making about the input?
-    - Have you considered edge cases?""",
-
-            InterviewStage.CODING: """
-    Focus: Observe implementation and understand approach
-    Key Questions:
-    - Can you walk me through your approach?
-    - What data structures are you considering?""",
-
-            InterviewStage.CODE_REVIEW: """
-    Focus: Review code structure and implementation choices
-    Key Questions:
-    - Why did you choose this particular approach?
-    - How would this solution scale with larger inputs?""",
-
-            InterviewStage.OPTIMIZATION: """
-    Focus: Discuss potential optimizations and tradeoffs
-    Key Questions:
-    - Are there any optimizations you can think of?
-    - What are the space/time complexity tradeoffs?""",
-
-            InterviewStage.CONCLUSION: """
-    Focus: Wrap up and gather final insights
-    Key Questions:
-    - What would you do differently if you had more time?
-    - Do you have any questions about the interview?"""
-        }
-
         return f"""Current Interview Stage: {self.state.current_stage.value}
-    Stage Goal: {stage_instructions[self.state.current_stage]}
-    Question: {self.state.question.title}
-    Difficulty: {self.state.question.difficulty}
-    Code Snapshots: {len(self.state.code_snapshots)}
-    Clarifications: {len(self.state.clarifications)}
-    Insights: {len(self.state.insights)}
-    """
+        Stage Goal: {self.state.current_stage.get_stage_prompt()}
+        Question: {self.state.question.title}
+        Difficulty: {self.state.question.difficulty}
+        Code Snapshots: {len(self.state.code_snapshots)}
+        Clarifications: {len(self.state.clarifications)}
+        Insights: {len(self.state.insights)}
+        """
 
     async def evaluate_and_update_stage(self, user_message: str, code_snapshot: str) -> Optional[str]:
         """Returns new stage prompt only if stage changed, None otherwise"""
@@ -149,6 +122,8 @@ class InterviewController:
             insights_count=len(self.state.insights)
         )
 
+        save_prompt("stage_evaluation", evaluation_prompt)
+
         # Create chat context for the evaluation
         chat_ctx = llm.ChatContext().append(
             role="system",
@@ -161,7 +136,6 @@ class InterviewController:
             async for chunk in response:
                 chunks.append(str(chunk))
             llm_response = "".join(chunks)
-
 
         try:
             response = json.loads(llm_response)

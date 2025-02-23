@@ -7,7 +7,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-def load_template(template_path: str, project_root: Optional[str] = None, save: bool = False) -> str:
+def load_template(template_path: str, project_root: Optional[str] = None) -> str:
     """
     Load a template file from the templates directory.
 
@@ -43,11 +43,6 @@ def load_template(template_path: str, project_root: Optional[str] = None, save: 
         with open(full_path, 'r') as f:
             template = f.read()
 
-        if save:
-            os.makedirs("prompts", exist_ok=True)
-            with open(f"prompts/{template_path}.txt", "w") as f:
-                f.write(template)
-
         return template
 
     except FileNotFoundError:
@@ -55,4 +50,39 @@ def load_template(template_path: str, project_root: Optional[str] = None, save: 
         raise
     except Exception as e:
         logger.error(f"Error loading template: {str(e)}")
+        raise
+
+
+def save_prompt(prompt_name: str, content: str, project_root: Optional[str] = None) -> None:
+    """
+    Write content to a prompt file in the prompts directory.
+
+    Args:
+        prompt_name: Name of the prompt file (without .txt extension)
+        content: Content to write to the prompt file
+        project_root: Optional project root directory. If not provided, will be inferred
+
+    Raises:
+        IOError: If there's an error writing the prompt file
+    """
+    try:
+        if project_root is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(os.path.dirname(current_dir))
+
+        prompts_dir = os.path.join(project_root, "prompts")
+
+        # Add .txt extension if not present
+        if not prompt_name.endswith('.txt'):
+            prompt_name += '.txt'
+
+        prompt_path = os.path.join(prompts_dir, prompt_name)
+
+        with open(prompt_path, 'w') as f:
+            f.write(content)
+
+        logger.info(f"Successfully wrote prompt to: {prompt_path}")
+
+    except Exception as e:
+        logger.error(f"Error writing prompt: {str(e)}")
         raise

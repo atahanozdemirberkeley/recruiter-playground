@@ -95,6 +95,9 @@ ENV/
 env/
 .env
 .venv
+prompts/
+/prompts
+
 
 # IDE
 .idea/

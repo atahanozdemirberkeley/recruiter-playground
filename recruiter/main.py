@@ -14,7 +14,7 @@ from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
 from rich.console import Console
 from components.interview_state import InterviewState, InterviewController
-from utils.template_utils import load_template
+from utils.template_utils import load_template, save_prompt
 import os
 import logging
 
@@ -57,10 +57,12 @@ async def entrypoint(ctx: JobContext):
         return
 
     # Load and format the template
-    template = load_template('template_initial_prompt', save=True)
+    template = load_template('template_initial_prompt')
     formatted_prompt = template.format(
         PROMPT_INFORMATION=prompt_information
     )
+
+    save_prompt("initial_prompt", formatted_prompt)
 
     # Create initial context with formatted prompt
     initial_ctx = llm.ChatContext().append(
@@ -132,7 +134,7 @@ async def entrypoint(ctx: JobContext):
         )
 
     async def write_transcription():
-        async with async_open("transcriptions.log", "w") as f:
+        async with async_open("recruiter/transcriptions.log", "w") as f:
             while True:
                 msg = await log_queue.get()
                 if msg is None:
