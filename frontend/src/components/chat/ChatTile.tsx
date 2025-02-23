@@ -15,10 +15,9 @@ export type ChatMessageType = {
 type ChatTileProps = {
   messages: ChatMessageType[];
   accentColor: string;
-  onSend?: (message: string) => Promise<ComponentsChatMessage>;
 };
 
-export const ChatTile = ({ messages, accentColor, onSend }: ChatTileProps) => {
+export const ChatTile = ({ messages, accentColor }: ChatTileProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (containerRef.current) {
@@ -27,16 +26,9 @@ export const ChatTile = ({ messages, accentColor, onSend }: ChatTileProps) => {
   }, [containerRef, messages]);
 
   return (
-    <div className="flex flex-col h-screen max-h-screen">
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto"
-        style={{
-          height: `calc(100vh - ${inputHeight}px)`,
-          maxHeight: `calc(100vh - ${inputHeight}px)`,
-        }}
-      >
-        <div className="flex flex-col min-h-full justify-end">
+    <div className="flex flex-col h-full">
+      <div ref={containerRef} className="flex-1 overflow-y-auto pb-4">
+        <div className="flex flex-col min-h-full justify-end px-4">
           {messages.map((message, index, allMsg) => {
             const hideName =
               index >= 1 && allMsg[index - 1].name === message.name;
@@ -54,12 +46,6 @@ export const ChatTile = ({ messages, accentColor, onSend }: ChatTileProps) => {
           })}
         </div>
       </div>
-      <ChatMessageInput
-        height={inputHeight}
-        placeholder="Type a message"
-        accentColor={accentColor}
-        onSend={onSend}
-      />
     </div>
   );
 };

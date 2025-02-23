@@ -450,7 +450,7 @@ export default function Playground({
             <PlaygroundTile
               title="Interview Chat"
               className="w-full flex-1 min-h-0 overflow-hidden"
-              childrenClassName="justify-center"
+              childrenClassName="h-full flex flex-col"
             >
               {chatTileContent}
             </PlaygroundTile>
