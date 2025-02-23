@@ -67,7 +67,7 @@ const TokenConnect = ({
           href="https://kitt.livekit.io/"
           className={`text-xs text-${accentColor}-500 hover:underline`}
         >
-          Don’t have a URL or token? Try out our KITT example to see agents in
+          Don't have a URL or token? Try out our KITT example to see agents in
           action!
         </a>
       </div>
@@ -84,9 +84,9 @@ export const PlaygroundConnect = ({
     ? "Connect to playground with LiveKit Cloud or manually with a URL and token"
     : "Connect to playground with a URL and token";
   return (
-    <div className="flex left-0 top-0 w-full h-full bg-black/80 items-center justify-center text-center gap-2">
-      <div className="min-h-[540px]">
-        <div className="flex flex-col bg-gray-950 w-full max-w-[480px] rounded-lg text-white border border-gray-900">
+    <div className="fixed left-0 top-0 w-screen h-screen flex items-center justify-center">
+      <div className="min-h-[540px] max-h-[90vh]">
+        <div className="flex flex-col bg-gray-950 w-[480px] max-w-[90vw] rounded-lg text-white border border-gray-900">
           <div className="flex flex-col gap-2">
             <div className="px-10 space-y-2 py-6">
               <h1 className="text-2xl">Connect to playground</h1>

@@ -389,24 +389,26 @@ export default function Playground({
     ),
   });
 
-
   // Update the code editor onChange handler
-  const handleCodeChange = useCallback((newCode: string) => {
-    setUserCode(newCode);
+  const handleCodeChange = useCallback(
+    (newCode: string) => {
+      setUserCode(newCode);
 
-    if (roomState === ConnectionState.Connected && localParticipant) {
-      const payload = {
-        type: "code_update",
-        code: newCode,
-        timestamp: Date.now(),
-      };
+      if (roomState === ConnectionState.Connected && localParticipant) {
+        const payload = {
+          type: "code_update",
+          code: newCode,
+          timestamp: Date.now(),
+        };
 
-      localParticipant.publishData(
-        new TextEncoder().encode(JSON.stringify(payload)),
-        { topic: "code" }
-      );
-    }
-  }, [localParticipant, roomState]);
+        localParticipant.publishData(
+          new TextEncoder().encode(JSON.stringify(payload)),
+          { topic: "code" }
+        );
+      }
+    },
+    [localParticipant, roomState]
+  );
 
   return (
     <>
@@ -419,9 +421,12 @@ export default function Playground({
           onConnect(roomState === ConnectionState.Disconnected)
         }
       />
-      <div className="flex gap-4 py-4 grow w-full">
-        <div className="flex flex-col basis-1/2 gap-4 h-full">
-          <PlaygroundTile title="Problem" className="w-full h-full">
+      <div className="flex gap-4 py-4 grow w-full min-h-0 overflow-hidden">
+        <div className="flex flex-col basis-1/2 gap-4 min-h-0 overflow-hidden">
+          <PlaygroundTile
+            title="Problem"
+            className="w-full h-full min-h-0 overflow-hidden"
+          >
             <CodeEditor
               value={userCode}
               onChange={handleCodeChange}
@@ -432,10 +437,10 @@ export default function Playground({
           </PlaygroundTile>
         </div>
 
-        <div className="flex flex-col basis-[30%] gap-4 h-full">
+        <div className="flex flex-col basis-[30%] gap-4 min-h-0 overflow-hidden">
           <PlaygroundTile
             title="Audio"
-            className="w-full h-1/4"
+            className="w-full min-h-[200px]"
             childrenClassName="justify-center"
           >
             {audioTileContent}
@@ -444,8 +449,8 @@ export default function Playground({
           {config.settings.chat && (
             <PlaygroundTile
               title="Interview Chat"
-              className="w-full h-3/4"
-              childrenClassName="justify-center"
+              className="w-full flex-1 min-h-0 overflow-hidden"
+              childrenClassName="h-full flex flex-col"
             >
               {chatTileContent}
             </PlaygroundTile>
@@ -455,8 +460,8 @@ export default function Playground({
         <PlaygroundTile
           padding={false}
           backgroundColor="gray-950"
-          className="h-full basis-1/5 items-start overflow-y-auto flex"
-          childrenClassName="h-full grow items-start"
+          className="basis-1/5 min-h-0 overflow-hidden"
+          childrenClassName="h-full grow items-start overflow-y-auto"
         >
           {settingsTileContent}
         </PlaygroundTile>
