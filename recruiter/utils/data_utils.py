@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class DataUtils:
-    def __init__(self, interview_controller, agent=None):
+    def __init__(self, interview_controller, agent=None, log_file_path="recruiter/transcriptions.log"):
         self.interview_controller = interview_controller
         self.agent = agent
         self.log_queue = asyncio.Queue()
-        self.transcription_file = "recruiter/transcriptions.log"
+        self.log_file_path = log_file_path
 
     async def process_data_packet(self, packet: DataPacket) -> None:
         """Process incoming data packets from the room."""
@@ -63,6 +63,7 @@ class DataUtils:
             f"STAGE: {self.interview_controller.state.current_stage.value}\n"
             f"{'='*80}\n\n"
         )
+        logger.debug("Successfully queued user speech message")
 
     async def handle_agent_speech(self, msg: llm.ChatMessage) -> None:
         """Handle agent speech events."""
@@ -76,7 +77,7 @@ class DataUtils:
 
     async def write_transcription(self) -> None:
         """Write transcriptions to a log file."""
-        async with async_open(self.transcription_file, "w") as f:
+        async with async_open(self.log_file_path, "w") as f:
             while True:
                 try:
                     msg = await self.log_queue.get()
@@ -88,5 +89,7 @@ class DataUtils:
                     logger.error(f"Error writing transcription: {e}")
 
     async def finish_queue(self) -> None:
-        """Clean up the log queue."""
+        """Clean up the log queue and wait for write task completion."""
         await self.log_queue.put(None)
+        # Wait for any pending writes to complete
+        await asyncio.sleep(0.1)  # Small delay to ensure queue processing

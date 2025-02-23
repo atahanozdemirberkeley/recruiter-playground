@@ -17,7 +17,7 @@ from utils.template_utils import load_template
 import os
 import logging
 from livekit.rtc import DataPacket
-from components.utils.data_utils import DataUtils
+from utils.data_utils import DataUtils
 
 
 console = Console()

@@ -393,7 +393,6 @@ export default function Playground({
   // Update the code editor onChange handler
   const handleCodeChange = useCallback((newCode: string) => {
     setUserCode(newCode);
-    console.log("Code changed:", newCode);
 
     if (roomState === ConnectionState.Connected && localParticipant) {
       const payload = {
@@ -401,7 +400,6 @@ export default function Playground({
         code: newCode,
         timestamp: Date.now(),
       };
-      console.log("Publishing code update:", payload);
 
       localParticipant.publishData(
         new TextEncoder().encode(JSON.stringify(payload)),
