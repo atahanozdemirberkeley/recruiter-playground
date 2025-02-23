@@ -40,11 +40,10 @@ class FileWatcher(EventEmitter):
         self._ensure_file_exists()
 
     def _ensure_file_exists(self):
-        """Create the file if it doesn't exist"""
+        """Create the file if it doesn't exist and reset its contents"""
         os.makedirs(os.path.dirname(self.path_to_watch), exist_ok=True)
-        if not os.path.exists(self.path_to_watch):
-            with open(self.path_to_watch, 'w') as f:
-                f.write('')
+        with open(self.path_to_watch, 'w') as f:
+            f.write('')
 
     def write_content(self, content: str) -> bool:
         """
