@@ -38,10 +38,10 @@ next-env.d.ts
 # env
 .env
 .env.local
-recruiter/new/
+app/new/
 **/venv/
 **/.env/
-recruiter/new/
+app/new/
 **/venv/
 **/__pycache__/
 *.pyc
@@ -54,7 +54,7 @@ venv/
 .venv/
 pip-log.txt
 
-recruiter/new/
+app/new/
 **/venv/
 **/__pycache__/
 *.pyc
@@ -87,12 +87,12 @@ wheels/
 *.egg
 transcriptions.log
 **/transcriptions.log
-**/recruiter/transcriptions.log
+**/app/transcriptions.log
 **/*.log
 **/test.py
 
 # Virtual Environment
-recruiter/new/
+app/new/
 venv/
 ENV/
 env/
@@ -146,7 +146,7 @@ frontend/.env*.local
 
 # vercel
 frontend/.vercel
-recruiter/__pycache__/
+app/__pycache__/
 
 # typescript
 frontend/*.tsbuildinfo
