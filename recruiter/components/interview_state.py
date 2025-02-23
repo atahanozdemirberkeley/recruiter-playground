@@ -9,9 +9,13 @@ from livekit.agents import llm
 from datetime import datetime, timedelta
 import asyncio
 import logging
+from livekit import rtc
+from components.filewatcher import FileWatcher
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+TEST_FILE_PATH = "testing/test.py"
 
 
 class InterviewStage(Enum):
@@ -45,6 +49,7 @@ class InterviewStage(Enum):
 class InterviewState:
     question: Question
     current_stage: InterviewStage
+    file_watcher: Optional[FileWatcher] = None  # Just store the reference
     # {id: {"code": str, "timestamp": int}}
     code_snapshots: Dict[str, Dict[str, Union[str, int]]
                          ] = field(default_factory=dict)
@@ -57,15 +62,47 @@ class InterviewState:
 
 
 class InterviewController:
-
     def __init__(self, question_manager: QuestionManager):
         self.question_manager = question_manager
         self.state = None
         self._last_stage_prompt = None
         self.llm = LLM(
-            model="gpt-4",  # or any other model you prefer
-            temperature=0.3  # lower temperature for more consistent stage management
+            model="gpt-4",
+            temperature=0.3
         )
+        # Initialize FileWatcher here instead
+        self.file_watcher = FileWatcher(TEST_FILE_PATH)
+        logger.info(f"FileWatcher initialized for {TEST_FILE_PATH}")
+
+    def get_file_watcher(self) -> FileWatcher:
+        """Get the FileWatcher instance"""
+        return self.file_watcher
+
+    def handle_code_update(self, code: str) -> bool:
+        """Handle code updates from the frontend"""
+        try:
+            success = self.file_watcher.write_content(code)
+            if not success:
+                logger.error("Failed to write code update to test.py")
+            else:
+                logger.info("Successfully wrote code update to test.py")
+            return success
+        except Exception as e:
+            logger.error(f"Error handling code update: {e}")
+            return False
+
+    def handle_data_message(self, data: bytes, user_id: str, topic: Optional[str] = None):
+        """Handle incoming data channel messages"""
+        try:
+            decoded = json.loads(data.decode('utf-8'))
+
+            # Handle code updates from the frontend
+            if decoded.get('type') == 'code_update':
+                code = decoded.get('code', '')
+                self.handle_code_update(code)
+
+        except Exception as e:
+            logger.error(f"Error handling data channel message: {e}")
 
     def initialize_interview(self, question_id: str):
         """Initialize the interview state with the selected question"""
@@ -73,6 +110,7 @@ class InterviewController:
         self.state = InterviewState(
             question=self.question,
             current_stage=InterviewStage.INTRODUCTION,
+            file_watcher=self.file_watcher,  # Pass the reference
             code_snapshots={},
             clarifications=[],
             insights=[],
@@ -83,7 +121,7 @@ class InterviewController:
             f"Interview initialized with duration: {self.question.duration} minutes")
 
     def get_system_prompt(self) -> str:
-        return self._generate_stage_prompt()        
+        return self._generate_stage_prompt()
 
     def update_stage(self, llm_response: dict) -> None:
         """Update interview state based on LLM's evaluation"""
@@ -111,8 +149,7 @@ class InterviewController:
 
     async def evaluate_and_update_stage(self, user_message: str, code_snapshot: str) -> Optional[str]:
         """Returns new stage prompt only if stage changed, None otherwise"""
-        
-        
+
         template = load_template('template_stage_evaluation')
         evaluation_prompt = template.format(
             current_stage=self.state.current_stage.value,

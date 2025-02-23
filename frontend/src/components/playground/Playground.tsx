@@ -389,6 +389,25 @@ export default function Playground({
     ),
   });
 
+
+  // Update the code editor onChange handler
+  const handleCodeChange = useCallback((newCode: string) => {
+    setUserCode(newCode);
+
+    if (roomState === ConnectionState.Connected && localParticipant) {
+      const payload = {
+        type: "code_update",
+        code: newCode,
+        timestamp: Date.now(),
+      };
+
+      localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify(payload)),
+        { topic: "code" }
+      );
+    }
+  }, [localParticipant, roomState]);
+
   return (
     <>
       <PlaygroundHeader
@@ -401,12 +420,11 @@ export default function Playground({
         }
       />
       <div className="flex gap-4 py-4 grow w-full">
-        {/* Left Side - Code Editor */}
         <div className="flex flex-col basis-1/2 gap-4 h-full">
           <PlaygroundTile title="Problem" className="w-full h-full">
             <CodeEditor
               value={userCode}
-              onChange={(code) => setUserCode(code)}
+              onChange={handleCodeChange}
               language="python"
               theme="vs-dark"
               placeholder="Write your solution here..."
@@ -414,7 +432,6 @@ export default function Playground({
           </PlaygroundTile>
         </div>
 
-        {/* Middle - Audio & Chat */}
         <div className="flex flex-col basis-[30%] gap-4 h-full">
           <PlaygroundTile
             title="Audio"
@@ -435,7 +452,6 @@ export default function Playground({
           )}
         </div>
 
-        {/* Right Side - Settings & Info */}
         <PlaygroundTile
           padding={false}
           backgroundColor="gray-950"
