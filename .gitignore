@@ -86,7 +86,9 @@ wheels/
 .installed.cfg
 *.egg
 transcriptions.log
-recruiter/transcriptions.log
+**/transcriptions.log
+**/recruiter/transcriptions.log
+**/*.log
 
 # Virtual Environment
 recruiter/new/
@@ -96,7 +98,7 @@ env/
 .env
 .venv
 prompts/
-/prompts
+**/prompts
 
 
 # IDE
