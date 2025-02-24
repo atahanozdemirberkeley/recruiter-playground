@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { useLocalParticipant, useConnectionState } from "@livekit/components-react";
 import { ConnectionState } from "livekit-client";
+import { useConfig } from "src/hooks/useConfig";
 
 const titleHeight = 32;
 
@@ -36,6 +37,7 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
   const contentPadding = padding ? 4 : 0;
   const { localParticipant } = useLocalParticipant();
   const connectionState = useConnectionState();
+  const { config } = useConfig();
 
   const sendDataMessage = (type: string) => {
     if (connectionState === ConnectionState.Connected && localParticipant) {
@@ -77,7 +79,7 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
                 >
                   Run
                 </button>
-                <button className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-r text-sm border-l border-[#6b6b6b]"
+                <button className={`px-4 py-1.5 bg-${config.settings.theme_color}-600 hover:bg-${config.settings.theme_color}-700 text-white rounded-r text-sm border-l border-[#6b6b6b]`}
                 onClick={() => sendDataMessage("submit_code")}
                 >
                   Submit
