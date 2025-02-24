@@ -1,4 +1,6 @@
 import { ReactNode, useState } from "react";
+import { useLocalParticipant, useConnectionState } from "@livekit/components-react";
+import { ConnectionState } from "livekit-client";
 
 const titleHeight = 32;
 
@@ -32,6 +34,24 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
   actions,
 }) => {
   const contentPadding = padding ? 4 : 0;
+  const { localParticipant } = useLocalParticipant();
+  const connectionState = useConnectionState();
+
+  const sendDataMessage = (type: string) => {
+    if (connectionState === ConnectionState.Connected && localParticipant) {
+      console.log("Sending data message:", type);
+      const payload = {
+        type,
+        timestamp: Date.now(),
+      };
+
+      localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify(payload)),
+        { topic: "code" }
+      );
+    }
+  };
+
   return (
     <div
       className={`flex flex-col ${className} ${
@@ -42,14 +62,30 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
     >
       {title && (
         <div
-          className={`flex items-center ${
+          className={`flex items-center justify-between ${
             title === "Problem"
               ? "bg-[#282828] px-5 py-4 text-[#eff1f6] text-base border-b border-[#3c3c3c]" // LeetCode-style header
               : "justify-center text-xs uppercase py-2 px-4 border-b border-gray-800 tracking-wider"
           }`}
         >
           <h2 className={title === "Problem" ? "font-medium" : ""}>{title}</h2>
-          {actions && <div className="flex items-center">{actions}</div>}
+          <div className="flex gap-4 items-center">
+            {title === "Problem" && (
+              <div className="flex">
+                <button className="px-4 py-1.5 bg-[#454545] hover:bg-[#565656] text-gray-300 rounded-l text-sm border border-transparent hover:border-[#6b6b6b]"
+                onClick={() => sendDataMessage("run_code")}
+                >
+                  Run
+                </button>
+                <button className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-r text-sm border-l border-[#6b6b6b]"
+                onClick={() => sendDataMessage("submit_code")}
+                >
+                  Submit
+                </button>
+              </div>
+            )}
+            {actions && <div className="flex items-center ml-4">{actions}</div>}
+          </div>
         </div>
       )}
       <div
