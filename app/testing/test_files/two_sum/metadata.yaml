@@ -10,3 +10,9 @@ hints:
   - "Use a hash map to store the difference between the target and each element"
   - "Check if the current element exists in the hash map"
   - "Consider edge cases such as duplicate elements and negative numbers"
+function_name: "two_sum"
+skeleton_code: |
+  class Solution:
+      def two_sum(self, nums: List[int], target: int) -> List[int]:
+          # Write your code here
+          pass

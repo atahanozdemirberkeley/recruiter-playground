@@ -21,10 +21,13 @@ class Question:
     category: str
     question: str
     solution: str
-    test_cases: List[Dict]
+    visible_test_cases: List[Dict]  # Test cases shown to candidate
+    all_test_cases: List[Dict]      # All test cases including hidden ones
     hints: List[str]
     # in minutes
     duration: int
+    function_name: str
+    skeleton_code: str
 
     @classmethod
     def from_directory(cls, question_dir: Path) -> 'Question':
@@ -51,12 +54,16 @@ class Question:
             with open(question_dir / "solution.txt") as f:
                 solution = f.read()
 
-            # Read test cases if they exist
+            # Read test cases
             test_cases = []
             test_cases_path = question_dir / "test_cases.yaml"
             if test_cases_path.exists():
                 with open(test_cases_path) as f:
                     test_cases = yaml.safe_load(f)
+
+            # Separate visible and hidden test cases
+            visible_tests = [
+                test for test in test_cases if test.get("visible", True)]
 
             return cls(
                 id=metadata['id'],
@@ -65,9 +72,12 @@ class Question:
                 category=metadata['category'],
                 question=question,
                 solution=solution,
-                test_cases=test_cases,
+                visible_test_cases=visible_tests,
+                all_test_cases=test_cases,
                 hints=metadata.get('hints', []),
-                duration=metadata.get('duration', 0)
+                duration=metadata.get('duration', 0),
+                function_name=metadata.get('function_name', 'solution'),
+                skeleton_code=metadata.get('skeleton_code', '')
             )
 
         except Exception as e:

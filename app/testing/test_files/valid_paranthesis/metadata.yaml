@@ -7,3 +7,9 @@ hints:
   - "Think about how you can use a stack data structure"
   - "Consider what happens when you encounter a closing bracket"
   - "What should happen if you encounter a closing bracket but the stack is empty?"
+function_name: "is_valid"
+skeleton_code: |
+  class Solution:
+      def is_valid(self, s: str) -> bool:
+          # Write your code here
+          pass

@@ -2,26 +2,31 @@
   target: 9
   output: [0, 1]
   description: "Two numbers that add up to the target are at indices 0 and 1"
+  visible: true
 
 - input: [3, 2, 4]
   target: 6
   output: [1, 2]
   description: "Two numbers that add up to the target are at indices 1 and 2"
+  visible: true
 
 - input: [3, 3]
   target: 6
   output: [0, 1]
   description: "Two numbers that add up to the target are at indices 0 and 1"
+  visible: true
 
 - input: [1, 2, 3, 4, 5]
   target: 9
   output: [3, 4]
   description: "Two numbers that add up to the target are at indices 3 and 4"
+  visible: false
 
 - input: [0, 4, 3, 0]
   target: 0
   output: [0, 3]
   description: "Two numbers that add up to the target are at indices 0 and 3"
+  visible: false
 
 - input: [-1, -2, -3, -4, -5]
   target: -8

@@ -1,15 +1,17 @@
 - input: "{[]}"
   output: true
   description: "Nested brackets"
+  visible: true
 
 - input: "([{}])"
   output: true
   description: "Multiple nested brackets"
-
+  visible: true
 - input: "((()))"
   output: true
   description: "Multiple nested parentheses"
-
+  visible: true
+  
 - input: "({[)]}"
   output: false
   description: "Incorrectly nested brackets"

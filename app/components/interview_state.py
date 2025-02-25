@@ -11,6 +11,7 @@ import asyncio
 import logging
 from livekit import rtc
 from components.filewatcher import FileWatcher
+from components.code_executor import CodeExecutor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -30,7 +31,7 @@ class InterviewStage(Enum):
     def get_stage_prompt(self) -> str:
         """
         Load the stage-specific prompt from templates/stages/template_{stage_name}.txt
-        
+
         Returns:
             str: The stage-specific instructions and questions
         """
@@ -73,6 +74,7 @@ class InterviewController:
         # Initialize FileWatcher here instead
         self.file_watcher = FileWatcher(TEST_FILE_PATH)
         logger.info(f"FileWatcher initialized for {TEST_FILE_PATH}")
+        self.code_executor = CodeExecutor()
 
     def get_file_watcher(self) -> FileWatcher:
         """Get the FileWatcher instance"""
@@ -304,3 +306,62 @@ class InterviewController:
             "timestamp": self.get_interview_duration(formatted=False)
         }
         return snapshot_id
+
+    async def run_code(self, mode: str = "run") -> Dict:
+        """
+        Run the current code against test cases
+
+        Args:
+            mode: Either "run" (visible tests only) or "submit" (all tests)
+        """
+        try:
+            logger.info(f"Starting code execution in {mode} mode")
+
+            # Get test file path from FileWatcher
+            test_file_path = self.file_watcher.path_to_watch
+            logger.info(f"Using test file: {test_file_path}")
+
+            # Select test cases based on mode
+            test_cases = (
+                self.state.question.visible_test_cases if mode == "run"
+                else self.state.question.all_test_cases
+            )
+            logger.info(
+                f"Selected {len(test_cases)} test cases for {mode} mode"
+                f" ({len(self.state.question.all_test_cases)} total cases available)"
+            )
+
+            # Execute tests
+            logger.info("Executing tests...")
+            success, results, console_output = self.code_executor.execute_tests(
+                test_file_path,
+                test_cases
+            )
+
+            logger.info(
+                f"Test execution completed - Success: {success}, "
+                f"Results count: {len(results) if isinstance(results, dict) else 0}"
+            )
+
+            response = {
+                "success": success,
+                "results": results,
+                "console_output": console_output,
+                "mode": mode
+            }
+            logger.debug(f"Full response: {response}")
+            return response
+
+        except Exception as e:
+            logger.error(
+                f"Error running code in {mode} mode: {e}", exc_info=True)
+            return {"success": False, "error": str(e), "mode": mode}
+
+    async def submit_code(self) -> Dict:
+        """Submit the code for final evaluation"""
+        return await self.run_code(mode="submit")
+
+    def cleanup(self):
+        """Cleanup resources"""
+        if hasattr(self, 'code_executor'):
+            self.code_executor.cleanup()
