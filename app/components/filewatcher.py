@@ -97,8 +97,6 @@ class FileWatcher(EventEmitter):
                     oldest_key = min(self.snapshot_history.keys())
                     del self.snapshot_history[oldest_key]
 
-                logger.info("File snapshot updated for %s", self.path_to_watch)
-
         except Exception as e:
             logger.error("Error reading file %s: %s", self.path_to_watch, e)
             self.last_snapshot = ""

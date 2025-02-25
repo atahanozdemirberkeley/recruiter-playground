@@ -56,7 +56,6 @@ async def entrypoint(ctx: JobContext):
 
         # Create timer updates task
         asyncio.create_task(interview_controller.start_time_updates(ctx.room))
-        logger.info("Timer updates task created")
 
     except KeyboardInterrupt:
         console.print("\nExiting...", style="yellow")

@@ -365,3 +365,30 @@ class InterviewController:
         """Cleanup resources"""
         if hasattr(self, 'code_executor'):
             self.code_executor.cleanup()
+
+    def handle_test_execution(self, results: Dict) -> None:
+        """Handle test execution results"""
+        success = results.get('success', False)
+        test_results = results.get('results', [])
+
+        # Get the test summary if available
+        test_summary = results.get('test_summary', {})
+        total_tests = test_summary.get('total', len(test_results))
+        passed_tests = test_summary.get('passed', sum(
+            1 for r in test_results if r.get('success')))
+
+        logger.info(
+            f"Test execution completed - Success: {success}, "
+            f"Passed: {passed_tests}/{total_tests} tests"
+        )
+
+        # Update the interview state with test results
+        self.state.update({
+            'test_success': success,
+            'test_results': test_results,
+            'test_summary': {
+                'total_tests': total_tests,
+                'passed_tests': passed_tests,
+                'failed_tests': total_tests - passed_tests
+            }
+        })

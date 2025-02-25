@@ -30,13 +30,11 @@ class DataUtils:
                 self.interview_controller.file_watcher.write_content(code_text)
 
             elif packet_type == "run_code":
-                logger.info("Running code")
                 results = await self.interview_controller.run_code()
                 # Send results back to frontend
                 await self.send_results_to_frontend(results)
 
             elif packet_type == "submit_code":
-                logger.info("Submitting code")
                 results = await self.interview_controller.submit_code()
                 # Send results back to frontend
                 await self.send_results_to_frontend(results)
