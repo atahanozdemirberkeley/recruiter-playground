@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "id": "two_sum",
+    "title": "Two Sum",
+    "difficulty": "easy",
+    "category": "array",
+    "duration": 60,
+    "hints": [
+      "Use a hash map to store the difference between the target and each element",
+      "Check if the current element exists in the hash map",
+      "Consider edge cases such as duplicate elements and negative numbers"
+    ],
+    "function_name": "two_sum",
+    "function_signature": "def two_sum(nums: List[int], target: int) -> List[int]",
+    "skeleton_code": "def two_sum(nums: List[int], target: int) -> List[int]:\n    # Write your code here\n    pass"
+  },
+  "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.\n\nExamples:\n...",
+  "solution": {
+    "code": "def two_sum(nums, target):\n    num_map = {}\n    for index, num in enumerate(nums):\n        complement = target - num\n        if complement in num_map:\n            return [num_map[complement], index]\n        num_map[num] = index\n    return []",
+    "explanation": "This problem can be efficiently solved using a hash map..."
+  },
+  "test_cases": [
+    {
+      "input_nums": [2, 7, 11, 15],
+      "input_target": 9,
+      "output": [0, 1],
+      "description": "Basic test case with solution at beginning",
+      "visible": true
+    },
+    {
+      "input_nums": [3, 2, 4],
+      "input_target": 6,
+      "output": [1, 2],
+      "description": "Solution in middle of array",
+      "visible": true
+    }
+  ]
+} 

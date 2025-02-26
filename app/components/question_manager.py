@@ -100,17 +100,15 @@ class QuestionManager:
         self._load_questions()
 
     def _load_questions(self):
-        """Load all questions from the questions directory."""
-        for question_dir in self.questions_root.iterdir():
-            if question_dir.is_dir():
-                try:
-                    question = Question.from_directory(question_dir)
-                    self.questions[question.id] = question
-                    # logger.info(
-                    #     f"Loaded question {question.id}: {question.title}")
-                except Exception as e:
-                    logger.error(
-                        f"Failed to load question from {question_dir}: {e}")
+        """Load all questions from JSON files."""
+        for question_file in self.questions_root.glob('*.json'):
+            try:
+                question = Question.from_directory(question_file)
+                self.questions[question.id] = question
+                logger.info(f"Loaded question {question.id}: {question.title}")
+            except Exception as e:
+                logger.error(
+                    f"Failed to load question from {question_file}: {e}")
 
     def get_question(self, question_id: str) -> Optional[Question]:
         """Get a question by its ID."""
