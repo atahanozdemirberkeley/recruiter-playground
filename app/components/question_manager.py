@@ -1,88 +1,14 @@
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
-import yaml
+import json
 import logging
 from utils.template_utils import load_template, save_prompt
 from rich.console import Console
-import sys
+from .question_models import Question, TestCase
 
 logger = logging.getLogger("question_manager")
 logger.setLevel(logging.INFO)
 console = Console()
-
-
-@dataclass
-class Question:
-    """Represents a coding interview question with its metadata and content."""
-    id: str
-    title: str
-    difficulty: str
-    category: str
-    question: str
-    solution: str
-    visible_test_cases: List[Dict]  # Test cases shown to candidate
-    all_test_cases: List[Dict]      # All test cases including hidden ones
-    hints: List[str]
-    # in minutes
-    duration: int
-    function_name: str
-    skeleton_code: str
-
-    @classmethod
-    def from_directory(cls, question_dir: Path) -> 'Question':
-        """
-        Creates a Question instance from a directory containing question files.
-
-        Expected directory structure:
-        question_id/
-        ├── metadata.yaml
-        ├── question.txt
-        ├── solution.txt
-        └── test_cases.yaml
-        """
-        try:
-            # Read metadata
-            with open(question_dir / "metadata.yaml") as f:
-                metadata = yaml.safe_load(f)
-
-            # Read question text
-            with open(question_dir / "question.txt") as f:
-                question = f.read()
-
-            # Read solution
-            with open(question_dir / "solution.txt") as f:
-                solution = f.read()
-
-            # Read test cases
-            test_cases = []
-            test_cases_path = question_dir / "test_cases.yaml"
-            if test_cases_path.exists():
-                with open(test_cases_path) as f:
-                    test_cases = yaml.safe_load(f)
-
-            # Separate visible and hidden test cases
-            visible_tests = [
-                test for test in test_cases if test.get("visible", True)]
-
-            return cls(
-                id=metadata['id'],
-                title=metadata['title'],
-                difficulty=metadata['difficulty'],
-                category=metadata['category'],
-                question=question,
-                solution=solution,
-                visible_test_cases=visible_tests,
-                all_test_cases=test_cases,
-                hints=metadata.get('hints', []),
-                duration=metadata.get('duration', 0),
-                function_name=metadata.get('function_name', 'solution'),
-                skeleton_code=metadata.get('skeleton_code', '')
-            )
-
-        except Exception as e:
-            logger.error(f"Error loading question from {question_dir}: {e}")
-            raise
 
 
 class QuestionManager:
@@ -101,14 +27,19 @@ class QuestionManager:
 
     def _load_questions(self):
         """Load all questions from JSON files."""
-        for question_file in self.questions_root.glob('*.json'):
-            try:
-                question = Question.from_directory(question_file)
-                self.questions[question.id] = question
-                logger.info(f"Loaded question {question.id}: {question.title}")
-            except Exception as e:
-                logger.error(
-                    f"Failed to load question from {question_file}: {e}")
+        # Look for question.json files in subdirectories
+        for question_dir in self.questions_root.iterdir():
+            if question_dir.is_dir():
+                question_file = question_dir / "question.json"
+                if question_file.exists():
+                    try:
+                        question = Question.from_json_file(question_file)
+                        self.questions[question.id] = question
+                        logger.info(
+                            f"Loaded question {question.id}: {question.title}")
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to load question from {question_file}: {e}")
 
     def get_question(self, question_id: str) -> Optional[Question]:
         """Get a question by its ID."""
@@ -135,27 +66,38 @@ class QuestionManager:
             title=question.title,
             difficulty=question.difficulty,
             category=question.category,
-            question=question.question,
-            duration=question.duration,
+            question=question.description,
             hints=chr(10).join(f"- {hint}" for hint in question.hints),
-            solution=question.solution
+            solution=question.solution['code']
         )
 
         save_prompt("question_context", formatted_prompt)
-
         return formatted_prompt
 
     def get_solution(self, question_id: str) -> Optional[str]:
         """Get the solution for a specific question (for verification only)."""
         question = self.get_question(question_id)
-        return question.solution_code if question else None
+        return question.solution['code'] if question else None
+
+    def get_test_cases(self, question_id: str, visible_only: bool = True) -> List[TestCase]:
+        """
+        Get test cases for a specific question.
+
+        Args:
+            question_id: The ID of the question
+            visible_only: If True, returns only visible test cases
+        """
+        question = self.get_question(question_id)
+        if not question:
+            return []
+        return question.visible_test_cases if visible_only else question.all_test_cases
 
     def select_question(self, question_number: int = 1) -> Tuple[str, str]:
         """
         Select the question by its number.
 
         Args:
-            question_number: The index of the question to select
+            question_number: The index of the question to select (1-based)
 
         Returns:
             Tuple[str, str]: Question ID and the complete prompt
@@ -163,14 +105,39 @@ class QuestionManager:
         if not self.questions:
             raise ValueError("No questions available")
 
-        # Get list of question IDs
-        question_ids = list(self.questions.keys())
+        # Get sorted list of question IDs for consistent ordering
+        question_ids = sorted(self.questions.keys())
 
-        # Validate index
-        if question_number < 0 or question_number >= len(question_ids):
+        # Adjust for 1-based indexing
+        idx = question_number - 1
+        if idx < 0 or idx >= len(question_ids):
             raise ValueError(
                 f"Question number {question_number} is out of range. Available questions: 1-{len(question_ids)}")
 
-        selected_id = question_ids[question_number]
+        selected_id = question_ids[idx]
         prompt = self.complete_prompt(selected_id)
         return selected_id, prompt
+
+    # TODO: Adapt to implementation
+    def validate_solution(self, question_id: str, submitted_code: str) -> Tuple[bool, List[str]]:
+        """
+        Validate a submitted solution against all test cases.
+
+        Args:
+            question_id: The ID of the question
+            submitted_code: The submitted solution code
+
+        Returns:
+            Tuple[bool, List[str]]: (Success status, List of error messages)
+        """
+        question = self.get_question(question_id)
+        if not question:
+            return False, ["Question not found"]
+
+        # Here you would implement the actual validation logic
+        # This might involve:
+        # 1. Creating a Solution class instance from the submitted code
+        # 2. Running all test cases
+        # 3. Comparing results with expected outputs
+
+        return True, []  # Placeholder return

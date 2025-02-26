@@ -11,71 +11,71 @@
       "What should happen if you encounter a closing bracket but the stack is empty?"
     ],
     "function_name": "is_valid",
-    "function_signature": "def is_valid(s: str) -> bool",
-    "skeleton_code": "def is_valid(s: str) -> bool:\n    # Write your code here\n    pass"
+    "function_signature": "class Solution:\n    def is_valid(self, s: str) -> bool",
+    "skeleton_code": "class Solution:\n    def is_valid(self, s: str) -> bool:\n        # Write your code here\n        pass"
   },
   "description": "Given a string s containing just the characters '(', ')', '{', '}', '[', and ']', determine if the input string is valid. An input string is valid if:\n\nOpen brackets must be closed by the same type of brackets.\nOpen brackets must be closed in the correct order.\n\nExamples:\n\nInput: s = \"()\" Output: true\n\nInput: s = \"()[]{}\" Output: true\n\nInput: s = \"(]\" Output: false\n\nInput: s = \"([)]\" Output: false\n\nInput: s = \"{[]}\" Output: true\n\nConstraints:\n\n1 <= s.length <= 10^4\ns consists of parentheses only '()[]{}'.",
   "solution": {
-    "code": "def is_valid(s):\n    # Mapping of closed to open parentheses for quick lookup\n    bracket_map = {')': '(', '}': '{', ']': '['}\n    stack = []  # Stack to keep track of opening parentheses\n\n    for char in s:\n        if char in bracket_map:  # It's a closing bracket\n            top_element = stack.pop() if stack else '#'\n            if bracket_map[char] != top_element:\n                return False\n        else:\n            stack.append(char)  # It's an opening bracket\n\n    return not stack  # If stack is empty, it's a valid string",
+    "code": "class Solution:\n    def is_valid(self, s: str) -> bool:\n        # Mapping of closed to open parentheses for quick lookup\n        bracket_map = {')': '(', '}': '{', ']': '['}\n        stack = []  # Stack to keep track of opening parentheses\n\n        for char in s:\n            if char in bracket_map:  # It's a closing bracket\n                top_element = stack.pop() if stack else '#'\n                if bracket_map[char] != top_element:\n                    return False\n            else:\n                stack.append(char)  # It's an opening bracket\n\n        return not stack  # If stack is empty, it's a valid string",
     "explanation": "For this problem, we can use a stack to help check for the correct order and matching of the parentheses. We push open brackets onto the stack and, when we encounter a close bracket, we check if the top of the stack is the corresponding open bracket. If not, or if the stack is empty when we find a closing bracket, the string is invalid."
   },
   "test_cases": [
     {
-      "input": "{[]}",
+      "input_s": "{[]}",
       "output": true,
       "description": "Nested brackets",
       "visible": true
     },
     {
-      "input": "([{}])",
+      "input_s": "([{}])",
       "output": true,
       "description": "Multiple nested brackets",
       "visible": true
     },
     {
-      "input": "((()))",
+      "input_s": "((()))",
       "output": true,
       "description": "Multiple nested parentheses",
       "visible": true
     },
     {
-      "input": "({[)]}", 
+      "input_s": "({[)]}", 
       "output": false,
       "description": "Incorrectly nested brackets",
       "visible": false
     },
     {
-      "input": "[",
+      "input_s": "[",
       "output": false,
       "description": "Single opening bracket",
       "visible": false
     },
     {
-      "input": "]",
+      "input_s": "]",
       "output": false,
       "description": "Single closing bracket",
       "visible": false
     },
     {
-      "input": "([]",
+      "input_s": "([]",
       "output": false,
       "description": "Unmatched opening bracket",
       "visible": false
     },
     {
-      "input": "[])",
+      "input_s": "[])",
       "output": false,
       "description": "Unmatched closing bracket",
       "visible": false
     },
     {
-      "input": "",
+      "input_s": "",
       "output": true,
       "description": "Empty string",
       "visible": false
     },
     {
-      "input": "{[()]}",
+      "input_s": "{[()]}",
       "output": true,
       "description": "Correctly nested brackets",
       "visible": false

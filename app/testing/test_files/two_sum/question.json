@@ -11,12 +11,12 @@
       "Consider edge cases such as duplicate elements and negative numbers"
     ],
     "function_name": "two_sum",
-    "function_signature": "def two_sum(nums: List[int], target: int) -> List[int]",
-    "skeleton_code": "def two_sum(nums: List[int], target: int) -> List[int]:\n    # Write your code here\n    pass"
+    "function_signature": "class Solution:\n    def two_sum(self, nums: List[int], target: int) -> List[int]",
+    "skeleton_code": "class Solution:\n    def two_sum(self, nums: List[int], target: int) -> List[int]:\n        # Write your code here\n        pass"
   },
   "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.\n\nExamples:\n...",
   "solution": {
-    "code": "def two_sum(nums, target):\n    num_map = {}\n    for index, num in enumerate(nums):\n        complement = target - num\n        if complement in num_map:\n            return [num_map[complement], index]\n        num_map[num] = index\n    return []",
+    "code": "class Solution:\n    def two_sum(self, nums: List[int], target: int) -> List[int]:\n        num_map = {}\n        for index, num in enumerate(nums):\n            complement = target - num\n            if complement in num_map:\n                return [num_map[complement], index]\n            num_map[num] = index\n        return []",
     "explanation": "This problem can be efficiently solved using a hash map..."
   },
   "test_cases": [
