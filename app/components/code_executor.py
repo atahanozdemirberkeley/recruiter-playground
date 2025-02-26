@@ -3,7 +3,7 @@ import os
 import logging
 import uuid
 import time
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import tempfile
 import shutil
 import json
@@ -207,49 +207,67 @@ print("Verification complete")
         }
         return results
 
-    def run_code(self, test_file_path: str, test_cases: list, mode: str = "run") -> Dict:
+    def run_code(self, test_file_path: str, test_cases: List[TestCase], mode: str = "run") -> Dict:
         """
         Run code against test cases and return formatted results
-
-        Args:
-            test_file_path: Path to the test file
-            test_cases: List of test cases to run
-            mode: Either "run" (visible tests only) or "submit" (all tests)
-
-        Returns:
-            Dict containing execution results
         """
         try:
             logger.info(f"Starting code execution in {mode} mode")
-            logger.info(f"Using test file: {test_file_path}")
-            logger.info(
-                f"Selected {len(test_cases)} test cases for {mode} mode")
-
-            # Execute tests
-            logger.info("Executing tests...")
-            success, results, console_output = self.execute_tests(
-                test_file_path,
-                test_cases
-            )
-
-            logger.info(
-                f"Test execution completed - Success: {success}, "
-                f"Results count: {len(results) if isinstance(results, dict) else 0} \n"
-            )
-
-            response = {
-                "success": success,
-                "results": results,
-                "console_output": console_output,
-                "mode": mode
-            }
-            logger.info(f"Console output: {console_output} \n")
-            return response
+            
+            # Get function name from first test case
+            function_name = test_cases[0].function_name if test_cases else None
+            if not function_name:
+                raise ValueError("No test cases provided")
+            
+            # Convert test cases to JSON format
+            test_cases_json = json.dumps([{
+                'id': tc.id,
+                'inputs': tc.io_data.args,
+                'expected': tc.io_data.expected
+            } for tc in test_cases])
+            
+            # Copy question_models.py to container
+            models_path = os.path.join(os.path.dirname(__file__), 'question_models.py')
+            container.exec_run(f"cp {models_path} /app/")
+            
+            # Run test runner in container
+            cmd = f"cd /app && python test_runner.py {test_file_path} {function_name} '{test_cases_json}'"
+            result = container.exec_run(cmd, stderr=True)
+            
+            # Parse results from container's output
+            output = result.output.decode('utf-8')
+            
+            try:
+                # Try to parse JSON from output
+                results = json.loads(output)
+                
+                if result.exit_code == 0:
+                    return {
+                        "success": True,
+                        "results": results,  # This contains the full test summary
+                        "mode": mode
+                    }
+                else:
+                    logger.error(f"Test execution failed: {results.get('error', output)}")
+                    return {
+                        "success": False,
+                        "error": results.get('error', output),
+                        "mode": mode
+                    }
+                    
+            except json.JSONDecodeError:
+                # If output isn't valid JSON, return raw output
+                logger.error(f"Failed to parse test results: {output}")
+                return {
+                    "success": False,
+                    "error": output,
+                    "mode": mode
+                }
+            
         except Exception as e:
             logger.error(f"Error in run_code: {str(e)}")
             return {
                 "success": False,
-                "results": {},
-                "console_output": f"Error executing code: {str(e)}",
+                "error": str(e),
                 "mode": mode
             }
