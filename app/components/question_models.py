@@ -1,7 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 from pathlib import Path
 import json
+from datetime import datetime
+import uuid
 
 
 @dataclass
@@ -25,11 +27,47 @@ class TestCaseIO:
 
 
 @dataclass
+class TestCaseResult:
+    """Represents the result of a test case execution."""
+    test_case_id: str  # Reference to the parent TestCase
+    success: bool = False
+    actual_output: Any = None
+    error_message: Optional[str] = None
+
+
+@dataclass
 class TestCase:
     """Represents a single test case for a coding question."""
     io_data: TestCaseIO
     visible: bool = True
     description: Optional[str] = None
+    id: str = field(default_factory=lambda: str(
+        uuid.uuid4()))  # Unique identifier
+    results: List[TestCaseResult] = field(
+        default_factory=list)  # Store multiple results
+
+    def add_result(self, output: Any, success: bool, error: Optional[str] = None) -> TestCaseResult:
+        """Add a new execution result."""
+        result = TestCaseResult(
+            test_case_id=self.id,
+            success=success,
+            actual_output=output,
+            error_message=error
+        )
+        self.results.append(result)
+        return result
+
+    def get_latest_result(self) -> Optional[TestCaseResult]:
+        """Get the most recent execution result."""
+        return self.results[-1] if self.results else None
+
+    def get_all_results(self) -> List[TestCaseResult]:
+        """Get all execution results."""
+        return self.results
+
+    def clear_results(self) -> None:
+        """Clear all execution results."""
+        self.results = []
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'TestCase':
