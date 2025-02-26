@@ -114,7 +114,10 @@ async def entrypoint(ctx: JobContext):
 
     ########### END EVENT LISTENERS ###########
 
-    await agent.say("Hey, welcome to our interview. Are you ready to start?",
+    await agent.say("""Hello, and welcome to this AI-powered technical interview. 
+                    I'm here to simulate a real interview experience and assess your problem-solving and coding skills naturally. 
+                    Before we start, could you briefly introduce yourself? 
+                    Feel free to ask any questions if you have them!""",
                     allow_interruptions=True)
 
     # Keep the agent running
