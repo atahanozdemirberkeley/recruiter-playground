@@ -22,18 +22,37 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
         with open(file_path, 'w') as f:
             f.write(modified_code)
 
-        # Import the solution file as a module
-        spec = importlib.util.spec_from_file_location("test_module", file_path)
-        if not spec or not spec.loader:
-            return {"success": False, "error": "Failed to load test file"}
+        # Print the code we're about to execute for debugging
+        print(f"Executing code:\n{modified_code}", file=sys.stderr)
 
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        # Import the solution file as a module
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "test_module", file_path)
+            if not spec or not spec.loader:
+                error_msg = "Failed to load test file"
+                print(f"Error: {error_msg}", file=sys.stderr)
+                return {"success": False, "error": error_msg}
+
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        except Exception as e:
+            error_msg = f"Error loading module: {str(e)}"
+            print(f"Module loading error: {error_msg}", file=sys.stderr)
+            print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
+            return {"success": False, "error": error_msg, "traceback": traceback.format_exc()}
 
         # Check for Solution class first
         solution_instance = None
         if hasattr(module, 'Solution'):
-            solution_instance = module.Solution()
+            try:
+                solution_instance = module.Solution()
+                print(
+                    f"Created Solution instance: {solution_instance}", file=sys.stderr)
+            except Exception as e:
+                error_msg = f"Error creating Solution instance: {str(e)}"
+                print(error_msg, file=sys.stderr)
+                return {"success": False, "error": error_msg, "traceback": traceback.format_exc()}
 
         # List all available attributes in the module
         module_contents = dir(module)
@@ -50,6 +69,14 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
                 if hasattr(solution_instance, name):
                     function_name = name
                     solution_func = getattr(solution_instance, name)
+                    print(f"Found instance method: {name}", file=sys.stderr)
+                    break
+                elif hasattr(module.Solution, name):
+                    # Check if it's a static/class method
+                    function_name = name
+                    solution_func = getattr(module.Solution, name)
+                    print(
+                        f"Found static/class method: {name}", file=sys.stderr)
                     break
 
         # If not found in class, look for module-level function
@@ -58,13 +85,13 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
                 if hasattr(module, name):
                     function_name = name
                     solution_func = getattr(module, name)
+                    print(f"Found module function: {name}", file=sys.stderr)
                     break
 
         if not solution_func:
-            return {
-                "success": False,
-                "error": f"Could not find solution function. Expected one of: {possible_names}. Found attributes: {module_contents}"
-            }
+            error_msg = f"Could not find solution function. Expected one of: {possible_names}. Found attributes: {module_contents}"
+            print(f"Error: {error_msg}", file=sys.stderr)
+            return {"success": False, "error": error_msg}
 
         results = []
         successful_tests = 0
@@ -75,10 +102,18 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
                 input_params = test_case.get("input", [])
                 target = test_case.get("target", 0)
 
-                if solution_instance:
+                print(
+                    f"Running test with input={input_params}, target={target}", file=sys.stderr)
+
+                # Check if it's a static method or instance method
+                if solution_instance and function_name in dir(solution_instance):
+                    print(f"Calling as instance method", file=sys.stderr)
                     actual_output = solution_func(input_params, target)
                 else:
+                    print(f"Calling as static/module function", file=sys.stderr)
                     actual_output = solution_func(input_params, target)
+
+                print(f"Test output: {actual_output}", file=sys.stderr)
 
                 is_valid = validate_output(actual_output, test_case)
 
@@ -96,8 +131,13 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
                 })
 
             except Exception as e:
+                error_msg = f"Error executing test: {str(e)}"
+                print(error_msg, file=sys.stderr)
+                print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
+
                 results.append({
-                    "input": input_params,
+                    "input": test_case.get("input", []),
+                    "target": test_case.get("target", 0),
                     "success": False,
                     "error": str(e),
                     "traceback": traceback.format_exc(),
@@ -105,7 +145,7 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
                 })
 
         return {
-            "success": successful_tests == total_tests,  # Only true if all tests pass
+            "success": successful_tests == total_tests,
             "results": results,
             "function_found": function_name,
             "solution_type": "class" if solution_instance else "function",
@@ -117,9 +157,12 @@ def run_test_file(file_path: str, test_cases: List[Dict[str, Any]]) -> Dict[str,
         }
 
     except Exception as e:
+        error_msg = f"Unexpected error in test runner: {str(e)}"
+        print(error_msg, file=sys.stderr)
+        print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
         return {
             "success": False,
-            "error": str(e),
+            "error": error_msg,
             "traceback": traceback.format_exc()
         }
 
