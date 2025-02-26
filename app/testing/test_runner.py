@@ -29,6 +29,11 @@ class SolutionLoader:
             Optional[Any]: The solution function if found and valid
         """
         try:
+            # Add typing imports to the module
+            import typing
+            import sys
+            sys.modules['typing'] = typing
+
             # Create module spec from file path
             spec = importlib.util.spec_from_file_location(
                 "solution_module",
@@ -39,6 +44,10 @@ class SolutionLoader:
 
             # Create module and execute it
             self.solution_module = importlib.util.module_from_spec(spec)
+
+            # Add typing to module namespace
+            self.solution_module.List = typing.List
+
             spec.loader.exec_module(self.solution_module)
 
             # Get Solution class

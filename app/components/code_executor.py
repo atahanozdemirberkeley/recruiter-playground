@@ -105,7 +105,6 @@ class CodeExecutor:
             container_config = {
                 'image': self.image_name,
                 'command': [
-                    'python',
                     '/app/test_runner.py',
                     '/app/tests/solution.py',  # solution file path
                     function_name,             # function name
@@ -157,6 +156,8 @@ class CodeExecutor:
                 logs = container.logs(stdout=True, stderr=True)
                 logs_decoded = logs.decode('utf-8')
 
+                logger.info(f"DEBUG: Container logs: {logs_decoded}")
+                # Don't treat failed tests as an error, only actual execution errors
                 if result['StatusCode'] != 0:
                     raise Exception(f"Test execution failed: {logs_decoded}")
 
