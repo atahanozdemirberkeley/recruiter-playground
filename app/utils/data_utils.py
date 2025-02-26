@@ -30,13 +30,17 @@ class DataUtils:
                 self.interview_controller.file_watcher.write_content(code_text)
 
             elif packet_type == "run_code":
-                results = await self.interview_controller.run_code()
-                # Send results back to frontend
+                test_file_path = self.interview_controller.file_watcher.path_to_watch
+                results = await self.interview_controller.run_code(
+                    mode="run"
+                )
                 await self.send_results_to_frontend(results)
 
             elif packet_type == "submit_code":
-                results = await self.interview_controller.submit_code()
-                # Send results back to frontend
+                test_file_path = self.interview_controller.file_watcher.path_to_watch
+                results = await self.interview_controller.run_code(
+                    mode="submit"
+                )
                 await self.send_results_to_frontend(results)
 
         except json.JSONDecodeError:

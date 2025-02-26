@@ -59,7 +59,6 @@ class FileWatcher(EventEmitter):
             with open(self.path_to_watch, 'w') as f:
                 f.write(content)
             self._take_snapshot()  # Update snapshot after write
-            logger.info("Successfully wrote content to %s", self.path_to_watch)
             return True
         except Exception as e:
             logger.error("Error writing to file %s: %s", self.path_to_watch, e)

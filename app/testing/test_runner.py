@@ -145,12 +145,16 @@ class TestRunner:
 def main():
     """Main entry point for the test runner"""
     if len(sys.argv) != 4:
-        print("Usage: python test_runner.py <solution_file_path> <function_name> <test_cases_json>")
+        print("Usage: python test_runner.py <solution_file_path> <function_name> <test_cases_json_path>")
         sys.exit(1)
 
     solution_path = sys.argv[1]
     function_name = sys.argv[2]
-    test_cases_json = sys.argv[3]
+    test_cases_path = sys.argv[3]
+
+    # Read test cases from file
+    with open(test_cases_path) as f:
+        test_cases_json = f.read()
 
     try:
         # Parse test cases

@@ -12,6 +12,7 @@ import logging
 from livekit import rtc
 from components.filewatcher import FileWatcher
 from components.code_executor import CodeExecutor
+from config import DOCKER_API_BASE_URL
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -74,7 +75,11 @@ class InterviewController:
         # Initialize FileWatcher here instead
         self.file_watcher = FileWatcher(TEST_FILE_PATH)
         logger.info(f"FileWatcher initialized for {TEST_FILE_PATH}")
+
+        # Initialize CodeExecutor with API base URL
         self.code_executor = CodeExecutor()
+        logger.info(
+            f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
 
     def get_file_watcher(self) -> FileWatcher:
         """Get the FileWatcher instance"""
@@ -314,19 +319,11 @@ class InterviewController:
         Args:
             mode: Either "run" (visible tests only) or "submit" (all tests)
         """
-        # Get test file path from FileWatcher
         test_file_path = self.file_watcher.path_to_watch
 
-        # Select test cases based on mode
-        test_cases = (
-            self.state.question.visible_test_cases if mode == "run"
-            else self.state.question.all_test_cases
-        )
-
-        # Delegate execution to CodeExecutor
         return self.code_executor.run_code(
             test_file_path=test_file_path,
-            test_cases=test_cases,
+            question=self.state.question,
             mode=mode
         )
 
