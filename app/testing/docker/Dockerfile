@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -16,18 +17,19 @@ COPY app/testing/docker/requirements.txt /app/
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy required files
+# Create directory for test files and set it as the working directory
+WORKDIR /app/tests
+
+# Copy required files to the correct locations
 COPY app/testing/test_runner.py /app/
 COPY app/components/question_models.py /app/
 
-# Create directory for test files
-RUN mkdir -p /app/tests
+# Set Python path to include both /app and /app/tests
+ENV PYTHONPATH=/app:/app/tests
 
-# Set Python path
-ENV PYTHONPATH=/app
-
-# Make test runner executable
-RUN chmod +x /app/test_runner.py
+# Ensure line endings are correct and file is executable
+RUN dos2unix /app/test_runner.py && \
+    chmod +x /app/test_runner.py
 
 # Default command (can be overridden)
-CMD ["python", "/app/test_runner.py"]
+CMD ["python3", "/app/test_runner.py"]

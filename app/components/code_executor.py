@@ -105,10 +105,11 @@ class CodeExecutor:
             container_config = {
                 'image': self.image_name,
                 'command': [
+                    'python3',              # Explicitly use python3 interpreter
                     '/app/test_runner.py',
-                    '/app/tests/solution.py',  # solution file path
-                    function_name,             # function name
-                    '/app/tests/test_cases.json'  # test cases file path
+                    '/app/tests/solution.py',
+                    function_name,
+                    '/app/tests/test_cases.json'
                 ],
                 'volumes': {
                     temp_dir: {
