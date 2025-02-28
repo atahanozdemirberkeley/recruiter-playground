@@ -28,10 +28,11 @@ class CodeExecutor:
         try:
             # Initialize Docker client
             self.docker_client = docker.from_env()
-
-            # Test connection
             self.docker_client.ping()
             logger.info("Successfully connected to Docker daemon")
+
+            # Clean up dangling images on startup
+            self._cleanup_dangling_images()
 
         except docker.errors.DockerException as e:
             # If auto-detection fails, try common configurations
@@ -272,11 +273,13 @@ class CodeExecutor:
             if temp_dir and os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
 
+            # Clean up dangling images after each run
+            self._cleanup_dangling_images()
+
     def _ensure_docker_image(self) -> None:
         """Ensure the required Docker image is available, pull if not"""
         try:
             self.docker_client.images.get(self.image_name)
-            logger.info(f"Docker image {self.image_name} found locally")
         except docker.errors.ImageNotFound:
             logger.info(f"Pulling Docker image {self.image_name}...")
             try:
@@ -285,3 +288,32 @@ class CodeExecutor:
             except docker.errors.APIError as e:
                 logger.error(f"Failed to pull Docker image: {e}")
                 raise
+
+    def _cleanup_dangling_images(self) -> None:
+        """
+        Remove dangling images (unused and untagged images)
+        """
+        try:
+            # Find all dangling images
+            dangling_images = self.docker_client.images.list(
+                filters={'dangling': True}
+            )
+
+            if dangling_images:
+                logger.info(f"Found {len(dangling_images)} dangling images")
+                for image in dangling_images:
+                    try:
+                        self.docker_client.images.remove(
+                            image.id,
+                            force=True,  # Force removal even if image is being used
+                            noprune=False  # Remove untagged parents
+                        )
+                        logger.info(f"Removed dangling image: {image.id[:12]}")
+                    except docker.errors.APIError as e:
+                        logger.warning(
+                            f"Failed to remove dangling image {image.id[:12]}: {e}")
+            else:
+                logger.info("No dangling images found")
+
+        except Exception as e:
+            logger.error(f"Error cleaning up dangling images: {e}")
