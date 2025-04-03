@@ -230,31 +230,30 @@ class InterviewController:
                             chunks.append(chunk.choices[0].delta.content)
             llm_response = "".join(chunks)
 
-        # try:
-        logger.info(llm_response)
-        response = json.loads(llm_response)
-        
-        # decide the new system prompt
-        if response["stage_action"] == "NEXT":
-            self.update_stage(response)
-            new_prompt = self._generate_stage_prompt()
-            self._last_stage_prompt = new_prompt
-            return new_prompt
-        elif response["stage_action"] == "FOLLOWUP":
-            return self._generate_followup_question_prompt(response["topic"])
-        elif response["stage_action"] == "NEW_QUESTION":
-            self.state.interview_questions["questions"][str(response["question_id"])]['asked'] = True
-            question = self.state.interview_questions["questions"][str(response["question_id"])]["description"]
-            return self._generate_new_question_prompt(json.dumps(question))
+        try:
+            response = json.loads(llm_response)
+            
+            # decide the new system prompt
+            if response["stage_action"] == "NEXT":
+                self.update_stage(response)
+                new_prompt = self._generate_stage_prompt()
+                self._last_stage_prompt = new_prompt
+                return new_prompt
+            elif response["stage_action"] == "FOLLOWUP":
+                return self._generate_followup_question_prompt(response["topic"])
+            elif response["stage_action"] == "NEW_QUESTION":
+                self.state.interview_questions["questions"][str(response["question_id"])]['asked'] = True
+                question = self.state.interview_questions["questions"][str(response["question_id"])]["description"]
+                return self._generate_new_question_prompt(json.dumps(question))
 
             # # Record insights/clarifications even if we stay in same stage
             # if response["record"]["type"] in ["insight", "clarification"]:
             #     self.update_stage(response)
 
-        #     return None
+            return None
 
-        # except json.JSONDecodeError:
-        #     return None
+        except json.JSONDecodeError:
+            return None
 
     def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """
