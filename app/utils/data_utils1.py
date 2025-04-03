@@ -7,7 +7,6 @@ from livekit.agents import llm
 from typing import Optional, Callable, Any
 from pathlib import Path
 from aiofile import async_open
-from livekit.agents.pipeline import VoicePipelineAgent
 
 logger = logging.getLogger(__name__)
 
@@ -47,41 +46,21 @@ class DataUtils:
             len(self.interview_controller.state.code_snapshots))] = code_snapshot
 
         # Only update agent context if stage changes
-        # meta_prompt = await self.interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
-        # logger.info(meta_prompt)
-        # if meta_prompt and self.agent:
-        #     self.agent.chat_ctx.append(
-        #         role="user",
-        #         # role="system",
-        #         text=meta_prompt
-        #     )
-        # logger.info(self.agent.chat_ctx)
-
-        # # Log interaction with interview duration
-        # duration = self.interview_controller.get_interview_time_since_start()
-        # await self.log_queue.put(
-        #     f"[{duration}] USER:\n{msg.content}\n\n"
-        #     f"CODE:\n{code_snapshot}\n\n"
-        #     f"STAGE: {self.interview_controller.state.current_stage.value}\n"
-        #     f"{'='*80}\n\n"
-        # )
-    
-    async def handle_user_speech_before_LLM(self, assistant: VoicePipelineAgent, chat_ctx: llm.ChatContext) -> None:
-        """Handle chatcontext before llm."""
-        code_snapshot = self.interview_controller.file_watcher._take_snapshot()
-        self.interview_controller.state.code_snapshots[str(
-            len(self.interview_controller.state.code_snapshots))] = code_snapshot
-
-        # Only update agent context if stage changes
-        meta_prompt = await self.interview_controller.evaluate_and_update_stage(str(chat_ctx.messages[-2:]), code_snapshot)
-        logger.info(meta_prompt)
-        if meta_prompt:
-            chat_ctx.append(
+        new_stage_prompt = await self.interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
+        if new_stage_prompt and self.agent:
+            self.agent.chat_ctx.append(
                 role="system",
-                text=meta_prompt
+                text=new_stage_prompt
             )
-        # logger.info(self.agent.chat_ctx)
 
+        # Log interaction with interview duration
+        duration = self.interview_controller.get_interview_time_since_start()
+        await self.log_queue.put(
+            f"[{duration}] USER:\n{msg.content}\n\n"
+            f"CODE:\n{code_snapshot}\n\n"
+            f"STAGE: {self.interview_controller.state.current_stage.value}\n"
+            f"{'='*80}\n\n"
+        )
 
     async def handle_agent_speech(self, msg: llm.ChatMessage) -> None:
         """Handle agent speech events."""

@@ -1,0 +1,9 @@
+{
+    "questions": {
+        "1": {
+            "difficulty": "medium",
+            "description": "Could you tell about an experience on your resume?",
+            "asked": false
+        }
+    }
+}

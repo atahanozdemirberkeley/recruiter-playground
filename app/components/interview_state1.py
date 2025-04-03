@@ -15,11 +15,6 @@ from components.filewatcher import FileWatcher
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# file_handler = logging.FileHandler('interview_state.log')
-# file_handler.setLevel(logging.INFO)
-# logger.addHandler(file_handler)
-
-
 TEST_FILE_PATH = "testing/test.py"
 
 
@@ -48,38 +43,6 @@ class InterviewStage(Enum):
             return """
     Focus: Continue with the interview process
     """
-        
-    def get_cur_stage_questions(self) -> Dict:
-        """
-        Load the stage-specific preset interview questions from testing/stage_questions/{stage_name}_stage_questions.txt
-
-        Returns:
-            Dict: The stage-specific preset interview questions
-        """
-        return self._load_stage_questions(self.value)
-    
-    @staticmethod
-    def get_stage_questions(stage: str) -> Dict:
-        return InterviewStage._load_stage_questions(stage)
-
-
-    @staticmethod
-    def _load_stage_questions(stage: str) -> Dict:
-        """
-        Load the stage-specific preset interview questions from testing/stage_questions/{stage_name}_stage_questions.txt
-
-        Returns:
-            Dict: The stage-specific preset interview questions
-        """
-        try:
-            template_path = f"testing/stage_questions/{stage}_stage_questions.txt"
-            with open(template_path, "r") as file:
-                data = json.load(file) 
-            return data
-        except FileNotFoundError:
-            logger.error(f"Stage questions not found for {stage}")
-            # Return default instructions if template not found
-            return {}
 
 
 @dataclass
@@ -96,7 +59,6 @@ class InterviewState:
     stage_timestamps: Dict[InterviewStage,
                            datetime] = field(default_factory=dict)
     interview_end_time: Optional[datetime] = None
-    interview_questions: Optional[str] = None # store the preset questions and their states
 
 
 class InterviewController:
@@ -153,8 +115,7 @@ class InterviewController:
             clarifications=[],
             insights=[],
             start_time=datetime.now(),
-            interview_end_time=datetime.now() + timedelta(minutes=self.question.duration),
-            interview_questions=InterviewStage.get_stage_questions("introduction")
+            interview_end_time=datetime.now() + timedelta(minutes=self.question.duration)
         )
         logger.info(
             f"Interview initialized with duration: {self.question.duration} minutes")
@@ -168,7 +129,6 @@ class InterviewController:
             current_idx = list(InterviewStage).index(self.state.current_stage)
             self.state.current_stage = list(InterviewStage)[min(
                 current_idx + 1, len(InterviewStage) - 1)]
-            self.state.interview_questions=self.state.current_stage.get_cur_stage_questions()
 
         # TODO: Explore this more in depth
         # Record any insights or clarifications
@@ -186,16 +146,6 @@ class InterviewController:
         Clarifications: {len(self.state.clarifications)}
         Insights: {len(self.state.insights)}
         """
-    
-    def _generate_new_question_prompt(self, question: str) -> str:
-        return f"""Based on the candidate's response and context, ask the candidate a new question as described below:
-        {question}
-        """
-
-    def _generate_followup_question_prompt(self, topic: str) -> str:
-        return f"""Based on the candidate's response and context, ask the candidate a follow-up question in the following direction:
-        {topic}
-        """
 
     async def evaluate_and_update_stage(self, user_message: str, code_snapshot: str) -> Optional[str]:
         """Returns new stage prompt only if stage changed, None otherwise"""
@@ -206,8 +156,7 @@ class InterviewController:
             user_message=user_message,
             code_status='Has code' if code_snapshot else 'No code',
             clarifications_count=len(self.state.clarifications),
-            insights_count=len(self.state.insights),
-            interview_questions=json.dumps(self.state.interview_questions)
+            insights_count=len(self.state.insights)
         )
 
         save_prompt("stage_evaluation", evaluation_prompt)
@@ -222,39 +171,25 @@ class InterviewController:
         async with self.llm.chat(chat_ctx=chat_ctx) as response:
             chunks = []
             async for chunk in response:
-                # The original code was wrong, this cannot get the correct response
-                # chunks.append(str(chunk))
-                if hasattr(chunk, 'choices') and chunk.choices:
-                    if hasattr(chunk.choices[0], 'delta') and hasattr(chunk.choices[0].delta, 'content'):
-                        if chunk.choices[0].delta.content is not None:
-                            chunks.append(chunk.choices[0].delta.content)
+                chunks.append(str(chunk))
             llm_response = "".join(chunks)
 
-        # try:
-        logger.info(llm_response)
-        response = json.loads(llm_response)
-        
-        # decide the new system prompt
-        if response["stage_action"] == "NEXT":
-            self.update_stage(response)
-            new_prompt = self._generate_stage_prompt()
-            self._last_stage_prompt = new_prompt
-            return new_prompt
-        elif response["stage_action"] == "FOLLOWUP":
-            return self._generate_followup_question_prompt(response["topic"])
-        elif response["stage_action"] == "NEW_QUESTION":
-            self.state.interview_questions["questions"][str(response["question_id"])]['asked'] = True
-            question = self.state.interview_questions["questions"][str(response["question_id"])]["description"]
-            return self._generate_new_question_prompt(json.dumps(question))
+        try:
+            response = json.loads(llm_response)
+            if response["stage_action"] == "NEXT":
+                self.update_stage(response)
+                new_prompt = self._generate_stage_prompt()
+                self._last_stage_prompt = new_prompt
+                return new_prompt
 
             # # Record insights/clarifications even if we stay in same stage
             # if response["record"]["type"] in ["insight", "clarification"]:
             #     self.update_stage(response)
 
-        #     return None
+            return None
 
-        # except json.JSONDecodeError:
-        #     return None
+        except json.JSONDecodeError:
+            return None
 
     def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """

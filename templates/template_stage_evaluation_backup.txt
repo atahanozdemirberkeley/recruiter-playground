@@ -20,39 +20,14 @@ Clarifications Asked: {clarifications_count}
 Insights Gathered: {insights_count}
 
 Based on this context, determine:
-1. Ask follow-up question and provide a rough topic of the question when there is problem in the answer
-2. Ask a new question. You should choose a question that has *not been asked* from the possible questions and their states provided below.
-3. move on to the next stage
-
-Possible Questions: {interview_questions}
+1. Should we stay in the current stage or move to the next stage?
+2. What specific question should we ask next?
+3. Should we record any insights or clarifications?
 
 Respond in the following JSON format:
 
-1. If choose to ask following-up question, reply in the jason format as:
 {{
-    "stage_action": "FOLLOWUP",
-    "topic": "provide a possible follow-up question topic here",
-    "record": {{
-        "type": "insight" or "clarification" or "none",
-        "content": "The insight or clarification to record (if any)"
-    }},
-    "reasoning": "Brief explanation of your decisions"
-}}
-
-2. If choose to ask a new question, reply in the jason format as:
-{{
-    "stage_action": "NEW_QUESTION",
-    "question_id": `Number of the new question in the state`,
-    "record": {{
-        "type": "insight" or "clarification" or "none",
-        "content": "The insight or clarification to record (if any)"
-    }},
-    "reasoning": "Brief explanation of your decisions"
-}}
-
-3. If choose to ask a new question, reply in the jason format as:
-{{
-    "stage_action": "NEXT",
+    "stage_action": "STAY" or "NEXT",
     "record": {{
         "type": "insight" or "clarification" or "none",
         "content": "The insight or clarification to record (if any)"

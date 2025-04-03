@@ -1,0 +1,24 @@
+{
+    "questions": {
+        "1": {
+            "difficulty": "medium",
+            "description": "Are there any areas in your code that can be optimized further?",
+            "asked": false
+        },
+        "2": {
+            "difficulty": "easy",
+            "description": "Can you explain the thought process behind your code?",
+            "asked": false
+        },
+        "3": {
+            "difficulty": "medium",
+            "description": "If you had more time, how would your answer change?",
+            "asked": false
+        },
+        "4": {
+            "difficulty": "medium",
+            "description": "What is the time and space complexity of your code?",
+            "asked": false
+        }
+    }
+}
