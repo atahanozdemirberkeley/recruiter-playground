@@ -12,12 +12,14 @@ The overall interview process consists of the following stages:
 6. Optimization: Discuss with the candidate whether there is room for code optimization.
 7. Conclusion: Guide the candidate to summarize this test.
 
-
 Current Stage: {current_stage}
 Latest User Message: {user_message}
 Code Status: {code_status}
 Clarifications Asked: {clarifications_count}
 Insights Gathered: {insights_count}
+
+* If you think the candidate hasn't fully answered the current question or there's something worth exploring further, choose "FOLLOWUP".
+* If the candidate fails to answer the current question successfully, select an easier question if you choose "NEW_QUESTION".
 
 Based on this context, determine:
 1. Ask follow-up question and provide a rough topic of the question when there is problem in the answer
