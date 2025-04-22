@@ -6,8 +6,7 @@ from aiofile import async_open
 from api import AssistantFnc
 from dotenv import load_dotenv
 from livekit import rtc
-from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
-from livekit.agents.pipeline import VoicePipelineAgent
+from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, Agent, cli, llm
 from livekit.plugins import openai, silero
 from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
@@ -29,6 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 async def entrypoint(ctx: JobContext):
+
+
+    # TODO: HIDE UNDER TOOL INITIALIZATION CLASS 
 
     # Initialize QuestionManager
     question_manager = QuestionManager(Path("testing/test_files"))
@@ -75,7 +77,7 @@ async def entrypoint(ctx: JobContext):
         text=formatted_prompt
     )
 
-    agent = VoicePipelineAgent(
+    session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
         llm=openai.LLM(),
@@ -83,6 +85,7 @@ async def entrypoint(ctx: JobContext):
         chat_ctx=initial_ctx,
         fnc_ctx=fnc_ctx,
     )
+
 
     # Update data_utils with agent reference
     data_utils.agent = agent
