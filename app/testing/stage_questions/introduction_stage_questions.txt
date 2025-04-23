@@ -1,0 +1,14 @@
+{
+    "questions": {
+        "1": {
+            "difficulty": "medium",
+            "description": "Could you tell about an experience on your resume?",
+            "asked": false
+        },
+        "2": {
+            "difficulty": "easy",
+            "description": "Do you have any questions about the interview process?",
+            "asked": false
+        }
+    }
+}

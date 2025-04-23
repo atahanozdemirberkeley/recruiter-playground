@@ -83,6 +83,7 @@ async def entrypoint(ctx: JobContext):
         tts=openai.TTS(),
         chat_ctx=initial_ctx,
         fnc_ctx=fnc_ctx,
+        before_llm_cb=data_utils.handle_user_speech_before_LLM,
     )
 
     # Update data_utils with agent reference
@@ -114,10 +115,12 @@ async def entrypoint(ctx: JobContext):
 
     ########### END EVENT LISTENERS ###########
 
-    await agent.say("""Hello, and welcome to this AI-powered technical interview. 
-                    I'm here to simulate a real interview experience and assess your problem-solving and coding skills naturally. 
-                    Before we start, could you briefly introduce yourself? 
-                    Feel free to ask any questions if you have them!""",
+    # await agent.say("""Hello, and welcome to this AI-powered technical interview. 
+    #                 I'm here to simulate a real interview experience and assess your problem-solving and coding skills naturally. 
+    #                 Before we start, could you briefly introduce yourself? 
+    #                 Feel free to ask any questions if you have them!""",
+    #                 allow_interruptions=True)
+    await agent.say("""Before we start, could you briefly introduce yourself?""",
                     allow_interruptions=True)
 
     # Keep the agent running

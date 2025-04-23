@@ -1,0 +1,19 @@
+{
+    "questions": {
+        "1": {
+            "difficulty": "medium",
+            "description": "How would you evaluate your own performance in this interview?",
+            "asked": false
+        },
+        "2": {
+            "difficulty": "medium",
+            "description": "What areas do you think you could improve on?",
+            "asked": false
+        },
+        "3": {
+            "difficulty": "easy",
+            "description": "Do you have any questions for me?",
+            "asked": false
+        }
+    }
+}
