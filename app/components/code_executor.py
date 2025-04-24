@@ -10,9 +10,9 @@ import json
 import inspect
 import requests
 from dataclasses import asdict
-from .question_models import TestCase, Question
+from utils.question_models import TestCase, Question
 from urllib.parse import urljoin
-from config import DOCKER_IMAGE_NAME
+from utils.config import DOCKER_IMAGE_NAME
 import platform
 
 logger = logging.getLogger(__name__)

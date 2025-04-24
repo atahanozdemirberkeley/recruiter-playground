@@ -82,7 +82,6 @@ class Question:
     """Represents a coding interview question with its metadata and content."""
     id: str
     title: str
-    prompt: str
     difficulty: str
     category: str
     description: str
@@ -94,6 +93,7 @@ class Question:
     function_name: str
     function_signature: str
     skeleton_code: str
+    prompt: Optional[str] = None
 
     @classmethod
     def from_json_file(cls, question_file: Path) -> 'Question':

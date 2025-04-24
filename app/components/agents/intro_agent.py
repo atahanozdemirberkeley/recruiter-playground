@@ -1,10 +1,8 @@
-import asyncio
-from livekit.agents import Agent, llm, AgentSession, RoomInputOptions, function_tool
-from livekit.plugins import openai, silero, noise_cancellation
-from livekit.plugins.turn_detector import multilingual
+from livekit.agents import Agent, function_tool
 from utils.template_utils import load_template
-from app.components.interview_controller import InterviewController
-from app.components.tools import get_interview_time_left
+from utils.shared_state import get_interview_controller
+from components.tools import get_interview_time_left
+from components.agents.coding_agent import CodingAgent
 
 class IntroAgent(Agent):
     """
@@ -12,31 +10,32 @@ class IntroAgent(Agent):
     and handling clarification questions before handing off to the coding agent.
     """
     
-    def __init__(self, interview_controller: InterviewController):
+    def __init__(self):
         self.template = load_template('template_intro_agent')
         super().__init__(
             instructions=self.template,
             tools=[get_interview_time_left]
         )
-        self.interview_controller = interview_controller
+        self.interview_controller = get_interview_controller()
         self.room = None
 
     async def on_enter(self):
         """Send the initial greeting to the user"""
-        await self.agent.say(
+        await self.send_message(
             """Hello, and welcome to this AI-powered technical interview. 
             I'm here to help you through this interview process.
             Today, you'll be solving a coding problem similar to what you might encounter in real technical interviews.
             Before we start, could you briefly introduce yourself? 
-            And please feel free to ask any questions about the process.""", 
-            allow_interruptions=True
+            And please feel free to ask any questions about the process."""
         )
     
     @function_tool()
     async def handoff_to_coding_agent(self):
-        """Handoff to the coding agent"""
-        #TODO
-        pass
+        """Hand off to the coding agent when the introduction is complete and
+        the candidate is ready to start the coding portion of the interview.
+        """
+        await self.send_message("Great! I'll now hand you over to our coding specialist who will guide you through the technical portion of the interview.")
+        return CodingAgent()
     
     
         

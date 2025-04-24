@@ -3,7 +3,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 from aiofile import async_open
-from api import AssistantFnc
 from dotenv import load_dotenv
 from livekit import rtc
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, Agent, cli, llm
@@ -11,7 +10,7 @@ from livekit.plugins import openai, silero
 from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
 from rich.console import Console
-from app.components.interview_controller import InterviewStage, InterviewController
+from components.interview_controller import InterviewStage, InterviewController
 from utils.template_utils import load_template, save_prompt
 from components.agents.intro_agent import IntroAgent
 import os
@@ -46,7 +45,7 @@ async def entrypoint(ctx: JobContext):
 
     asyncio.create_task(interview_controller.start_time_updates(ctx.room))
 
-    intro_agent = IntroAgent(interview_controller)
+    intro_agent = IntroAgent()
     data_utils.agent = intro_agent
 
     session = AgentSession(

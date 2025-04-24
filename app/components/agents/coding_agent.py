@@ -1,10 +1,8 @@
-import asyncio
-import re
-from livekit.agents import Agent, llm, AgentSession, RoomInputOptions, function_tool
-from livekit.plugins import openai, silero, noise_cancellation
-from livekit.plugins.turn_detector import multilingual
+from livekit.agents import Agent, function_tool
 from utils.template_utils import load_template
-from app.components.tools import get_file_snapshot, get_interview_time_left
+from components.tools import get_file_snapshot, get_interview_time_left
+from utils.shared_state import get_interview_controller
+from components.agents.outro_agent import OutroAgent
 
 class CodingAgent(Agent):
     """
@@ -13,13 +11,13 @@ class CodingAgent(Agent):
     It analyzes user code submissions and provides appropriate feedback.
     """
     
-    def __init__(self, interview_controller):
+    def __init__(self):
         self.template = load_template('template_coding_agent')
         super().__init__(
             instructions=self.template,
             tools=[get_file_snapshot, get_interview_time_left]
-        )
-        self.interview_controller = interview_controller
+        )       
+        self.interview_controller = get_interview_controller()
         self.question = None
         
     async def on_enter(self):
@@ -28,7 +26,6 @@ class CodingAgent(Agent):
 
     @function_tool()
     async def handoff_to_outro_agent(self):
-        """Handoff to the outro agent"""
-        #TODO
-        pass
+        """Handoff to the outro agent when the coding portion of the interview is complete."""
+        return OutroAgent()
     

@@ -38,8 +38,8 @@ export type UserSettings = {
 
 // Fallback if NEXT_PUBLIC_APP_CONFIG is not set
 const defaultConfig: AppConfig = {
-  title: "LiveKit Agents Playground",
-  description: "A playground for testing LiveKit Agents",
+  title: "Technical AI Interview",
+  description: "Welcome to your Technical Interview! This interview will be conducted by an AI interviewer who will guide you through the whole interview.",
   video_fit: "cover",
   settings: {
     editable: true,
@@ -63,16 +63,30 @@ const useAppConfig = (): AppConfig => {
   return useMemo(() => {
     if (process.env.NEXT_PUBLIC_APP_CONFIG) {
       try {
-        const parsedConfig = jsYaml.load(
-          process.env.NEXT_PUBLIC_APP_CONFIG
-        ) as AppConfig;
-        if (parsedConfig.settings === undefined) {
-          parsedConfig.settings = defaultConfig.settings;
+        // Check if the env var is just a quote or empty
+        const configValue = process.env.NEXT_PUBLIC_APP_CONFIG.trim();
+        console.log(process.env.NEXT_PUBLIC_APP_CONFIG);
+        if (configValue === '"' || configValue === "'" || configValue.length <= 2) {
+          console.log("HELLO");
+          console.warn("Invalid config value, using default");
+          return defaultConfig;
         }
-        if (parsedConfig.settings.editable === undefined) {
-          parsedConfig.settings.editable = true;
+
+        // Try parsing as JSON first
+        try {
+          return JSON.parse(configValue) as AppConfig;
+        } catch (jsonError) {
+          console.warn("Failed to parse as JSON, trying YAML", jsonError);
+          // Fall back to YAML parsing
+          const parsedConfig = jsYaml.load(configValue) as AppConfig;
+          if (parsedConfig.settings === undefined) {
+            parsedConfig.settings = defaultConfig.settings;
+          }
+          if (parsedConfig.settings.editable === undefined) {
+            parsedConfig.settings.editable = true;
+          }
+          return parsedConfig;
         }
-        return parsedConfig;
       } catch (e) {
         console.error("Error parsing app config:", e);
       }

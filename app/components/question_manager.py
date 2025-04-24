@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
-import json
+from typing import Optional, Dict, List
 import logging
 from utils.template_utils import load_template, save_prompt
 from rich.console import Console
-from ..utils.question_models import Question, TestCase
+from utils.question_models import Question, TestCase
 
 logger = logging.getLogger("question_manager")
 logger.setLevel(logging.INFO)

@@ -1,8 +1,6 @@
 
 from typing_extensions import Annotated
-from livekit.agents import Agent, function_tool, get_job_context  
-from components.filewatcher import FileWatcher
-from app.components.interview_controller import InterviewStage, InterviewController
+from livekit.agents import Agent, function_tool
 from utils.shared_state import get_interview_controller
 
 @function_tool()

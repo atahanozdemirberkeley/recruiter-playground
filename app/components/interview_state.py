@@ -61,9 +61,9 @@ class InterviewController:
         logger.info(f"FileWatcher initialized for {TEST_FILE_PATH}")
 
         # Initialize CodeExecutor with API base URL
-        # self.code_executor = CodeExecutor()
-        # logger.info(
-        #     f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
+        self.code_executor = CodeExecutor()
+        logger.info(
+            f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
 
     def get_file_watcher(self) -> FileWatcher:
         """Get the FileWatcher instance"""
@@ -82,6 +82,7 @@ class InterviewController:
             logger.error(f"Error handling code update: {e}")
             return False
 
+
     def initialize_interview(self, question: Question):
         """Initialize the interview with the selected question"""
         self.question = question
@@ -94,6 +95,8 @@ class InterviewController:
 
     def get_system_prompt(self) -> str:
         return self._generate_stage_prompt()
+
+
 
     def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """
