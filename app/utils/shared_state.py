@@ -1,7 +1,7 @@
 """Shared state management"""
 
 from typing import Optional
-from app.components.interview_state import InterviewController
+from app.components.interview_controller import InterviewController
 
 class SharedState:
     interview_controller: Optional[InterviewController] = None

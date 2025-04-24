@@ -12,9 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 class DataUtils:
-    def __init__(self, interview_controller, agent=None, log_file_path="transcriptions.log"):
+    def __init__(self, interview_controller, log_file_path="transcriptions.log"):
         self.interview_controller = interview_controller
-        self.agent = agent
         self.log_queue = asyncio.Queue()
         self.log_file_path = log_file_path
 
@@ -70,16 +69,6 @@ class DataUtils:
         # Update to access code_snapshots directly on interview_controller
         snapshot_id = str(len(self.interview_controller.code_snapshots))
         self.interview_controller.code_snapshots[snapshot_id] = code_snapshot
-
-        # Check if the evaluate_and_update_stage method exists
-        if hasattr(self.interview_controller, 'evaluate_and_update_stage'):
-            # Only update agent context if stage changes
-            new_stage_prompt = await self.interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
-            if new_stage_prompt and self.agent:
-                self.agent.chat_ctx.append(
-                    role="system",
-                    text=new_stage_prompt
-                )
 
         # Log interaction with interview duration
         duration = self.interview_controller.get_interview_time_since_start()

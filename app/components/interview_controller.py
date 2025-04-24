@@ -82,7 +82,6 @@ class InterviewController:
             logger.error(f"Error handling code update: {e}")
             return False
 
-
     def initialize_interview(self, question: Question):
         """Initialize the interview with the selected question"""
         self.question = question
@@ -95,8 +94,6 @@ class InterviewController:
 
     def get_system_prompt(self) -> str:
         return self._generate_stage_prompt()
-
-
 
     def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """

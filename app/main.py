@@ -11,8 +11,9 @@ from livekit.plugins import openai, silero
 from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
 from rich.console import Console
-from components.interview_state import InterviewStage, InterviewController
+from app.components.interview_controller import InterviewStage, InterviewController
 from utils.template_utils import load_template, save_prompt
+from components.agents.intro_agent import IntroAgent
 import os
 import logging
 from livekit.rtc import DataPacket
@@ -39,52 +40,36 @@ async def entrypoint(ctx: JobContext):
     interview_controller.room = ctx.room
     data_utils = DataUtils(interview_controller)
 
-
     # Initialize the interview state
     question = question_manager.select_question(QUESTION_NUMBER)
     interview_controller.initialize_interview(question)
 
     asyncio.create_task(interview_controller.start_time_updates(ctx.room))
 
-    # Load and format the template
-    template = load_template('template_initial_prompt')
-    formatted_prompt = template.format(
-        PROMPT_INFORMATION=prompt_information
-    )
-
-    save_prompt("initial_prompt", formatted_prompt)
-
-    # Create initial context with formatted prompt
-    initial_ctx = llm.ChatContext().append(
-        role="system",
-        text=formatted_prompt
-    )
+    intro_agent = IntroAgent(interview_controller)
+    data_utils.agent = intro_agent
 
     session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
         llm=openai.LLM(),
         tts=openai.TTS(),
-        chat_ctx=initial_ctx,
-        fnc_ctx=fnc_ctx,
     )
 
-
-    # Update data_utils with agent reference
-    data_utils.agent = agent
-
+    await session.start(room=ctx.room, agent=intro_agent)
+    
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
-
-    agent.start(ctx.room)
+    asyncio.create_task(data_utils.write_transcription())
+    ctx.add_shutdown_callback(data_utils.finish_queue)
 
     ########### START EVENT LISTENERS ###########
 
-    @agent.on("user_speech_committed")
+    @session.on("user_speech_committed")
     def on_user_speech_committed(msg: llm.ChatMessage):
         asyncio.create_task(data_utils.handle_user_speech(msg))
 
-    @agent.on("agent_speech_committed")
+    @session.on("agent_speech_committed")
     def on_agent_speech_committed(msg: llm.ChatMessage):
         asyncio.create_task(data_utils.handle_agent_speech(msg))
 
@@ -93,17 +78,7 @@ async def entrypoint(ctx: JobContext):
     def handle_data_received(packet: DataPacket):
         asyncio.create_task(data_utils.process_data_packet(packet))
 
-    write_task = asyncio.create_task(data_utils.write_transcription())
-
-    ctx.add_shutdown_callback(data_utils.finish_queue)
-
     ########### END EVENT LISTENERS ###########
-
-    await agent.say("""Hello, and welcome to this AI-powered technical interview. 
-                    I'm here to simulate a real interview experience and assess your problem-solving and coding skills naturally. 
-                    Before we start, could you briefly introduce yourself? 
-                    Feel free to ask any questions if you have them!""",
-                    allow_interruptions=True)
 
     # Keep the agent running
     while True:

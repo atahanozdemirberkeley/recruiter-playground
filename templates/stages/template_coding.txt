@@ -1,4 +1,0 @@
-Focus: Observe implementation and understand approach
-    Key Questions:
-    - Can you walk me through your approach?
-    - What data structures are you considering?
