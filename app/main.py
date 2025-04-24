@@ -11,7 +11,7 @@ from livekit.plugins import openai, silero
 from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
 from rich.console import Console
-from components.interview_state import InterviewState, InterviewController
+from components.interview_state import InterviewStage, InterviewController
 from utils.template_utils import load_template, save_prompt
 import os
 import logging
@@ -23,45 +23,28 @@ console = Console()
 load_dotenv()
 
 QUESTION_NUMBER = 1
+PATH = "testing/test_files"
 
 logger = logging.getLogger(__name__)
 
 
 async def entrypoint(ctx: JobContext):
 
-
-    # TODO: HIDE UNDER TOOL INITIALIZATION CLASS 
-
-    # Initialize QuestionManager
-    question_manager = QuestionManager(Path("testing/test_files"))
-
-    # Initialize InterviewController with FileWatcher
-    interview_controller = InterviewController(question_manager)
-
-    # Initialize AssistantFnc with interview_controller
-    fnc_ctx = AssistantFnc(interview_controller)
-
     # Connect to room
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    # Set the room in the interview controller
+    # Initialize components
+    question_manager = QuestionManager(Path(PATH))
+    interview_controller = InterviewController(question_manager)
     interview_controller.room = ctx.room
-
-    # Initialize DataUtils
     data_utils = DataUtils(interview_controller)
 
-    try:
-        # Initialize the interview state
-        question_id, prompt_information = question_manager.select_question(
-            QUESTION_NUMBER)
-        interview_controller.initialize_interview(question_id)
 
-        # Create timer updates task
-        asyncio.create_task(interview_controller.start_time_updates(ctx.room))
+    # Initialize the interview state
+    question = question_manager.select_question(QUESTION_NUMBER)
+    interview_controller.initialize_interview(question)
 
-    except KeyboardInterrupt:
-        console.print("\nExiting...", style="yellow")
-        return
+    asyncio.create_task(interview_controller.start_time_updates(ctx.room))
 
     # Load and format the template
     template = load_template('template_initial_prompt')

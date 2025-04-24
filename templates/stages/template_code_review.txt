@@ -1,4 +1,0 @@
-Focus: Review code structure and implementation choices
-    Key Questions:
-    - Why did you choose this particular approach?
-    - How would this solution scale with larger inputs?

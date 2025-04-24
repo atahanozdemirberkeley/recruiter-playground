@@ -1,4 +1,0 @@
-Focus: Discuss potential optimizations and tradeoffs
-    Key Questions:
-    - Are there any optimizations you can think of?
-    - What are the space/time complexity tradeoffs?

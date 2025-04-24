@@ -77,12 +77,12 @@ class TestCase:
             description=data.get('description')
         )
 
-
 @dataclass
 class Question:
     """Represents a coding interview question with its metadata and content."""
     id: str
     title: str
+    prompt: str
     difficulty: str
     category: str
     description: str
@@ -128,3 +128,6 @@ class Question:
         except Exception as e:
             raise Exception(
                 f"Error loading question from {question_file}: {e}")
+
+
+

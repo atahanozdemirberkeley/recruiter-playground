@@ -65,30 +65,28 @@ class DataUtils:
 
     async def handle_user_speech(self, msg: llm.ChatMessage) -> None:
         """Handle user speech events."""
-        if isinstance(msg.content, list):
-            msg.content = "\n".join(
-                "[image]" if isinstance(x, llm.ChatImage) else x for x in msg
-            )
-
         # Take code snapshot
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
-        self.interview_controller.state.code_snapshots[str(
-            len(self.interview_controller.state.code_snapshots))] = code_snapshot
+        # Update to access code_snapshots directly on interview_controller
+        snapshot_id = str(len(self.interview_controller.code_snapshots))
+        self.interview_controller.code_snapshots[snapshot_id] = code_snapshot
 
-        # Only update agent context if stage changes
-        new_stage_prompt = await self.interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
-        if new_stage_prompt and self.agent:
-            self.agent.chat_ctx.append(
-                role="system",
-                text=new_stage_prompt
-            )
+        # Check if the evaluate_and_update_stage method exists
+        if hasattr(self.interview_controller, 'evaluate_and_update_stage'):
+            # Only update agent context if stage changes
+            new_stage_prompt = await self.interview_controller.evaluate_and_update_stage(msg.content, code_snapshot)
+            if new_stage_prompt and self.agent:
+                self.agent.chat_ctx.append(
+                    role="system",
+                    text=new_stage_prompt
+                )
 
         # Log interaction with interview duration
         duration = self.interview_controller.get_interview_time_since_start()
         await self.log_queue.put(
             f"[{duration}] USER:\n{msg.content}\n\n"
             f"CODE:\n{code_snapshot}\n\n"
-            f"STAGE: {self.interview_controller.state.current_stage.value}\n"
+            f"STAGE: {self.interview_controller.current_stage.value}\n"
             f"{'='*80}\n\n"
         )
 
