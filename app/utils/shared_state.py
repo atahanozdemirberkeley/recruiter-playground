@@ -1,15 +1,18 @@
 """Shared state management"""
 
-from typing import Optional
-from components.interview_controller import InterviewController
+_interview_controller = None
+_data_utils = None
 
-class SharedState:
-    interview_controller: InterviewController = None
+def set_state(data_utils_instance, interview_controller_instance):
+    """Set shared state instances"""
+    global _interview_controller, _data_utils
+    _interview_controller = interview_controller_instance
+    _data_utils = data_utils_instance
 
-shared_state = SharedState()
+def get_interview_controller():
+    """Get the shared interview controller instance"""
+    return _interview_controller
 
-def set_interview_controller(interview_controller: InterviewController):
-    shared_state.interview_controller = interview_controller
-
-def get_interview_controller() -> InterviewController:
-    return shared_state.interview_controller
+def get_data_utils():
+    """Get the shared data utils instance"""
+    return _data_utils

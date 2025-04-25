@@ -106,5 +106,6 @@ class QuestionManager:
 
         selected_id = question_ids[idx]
         selected_question = self.questions[selected_id]
+        logger.info(f"SELECTED QUESTIONSELECTED QUESTIONSELECTED QUESTIONSELECTED QUESTIONSELECTED QUESTION: {selected_question.title}")
         selected_question.prompt = self.get_question_prompt(selected_id)
         return selected_question

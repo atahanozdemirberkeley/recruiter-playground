@@ -1,6 +1,6 @@
 from livekit.agents import Agent, function_tool
 from utils.template_utils import load_template
-from utils.shared_state import get_interview_controller
+from utils.shared_state import get_interview_controller, get_data_utils
 from components.tools import get_interview_time_left
 from components.agents.coding_agent import CodingAgent
 from utils.data_utils import DataUtils
@@ -36,9 +36,9 @@ class IntroAgent(Agent):
         the candidate is ready to start the coding portion of the interview.
         """
         # Send question data to frontend for code editor
-        data_utils = self.interview_controller.data_utils
+        data_utils = get_data_utils()
         await data_utils.send_question_to_frontend()
-        
+        self.interview_controller.stage_timestamps["intro_end"] = int(self.interview_controller.get_interview_time_since_start())
         return CodingAgent()
     
     

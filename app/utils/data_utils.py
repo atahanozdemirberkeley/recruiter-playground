@@ -75,7 +75,6 @@ class DataUtils:
         await self.log_queue.put(
             f"[{duration}] USER:\n{msg.content}\n\n"
             f"CODE:\n{code_snapshot}\n\n"
-            f"STAGE: {self.interview_controller.current_stage.value}\n"
             f"{'='*80}\n\n"
         )
 
@@ -102,8 +101,13 @@ class DataUtils:
                 except Exception as e:
                     logger.error(f"Error writing transcription: {e}")
 
-    async def finish_queue(self) -> None:
-        """Clean up the log queue and wait for write task completion."""
+    async def finish_queue(self, shutdown_reason=None) -> None:
+        """Clean up the log queue and wait for write task completion.
+        
+        Args:
+            shutdown_reason: The reason for shutdown (passed by LiveKit callback)
+        """
+        logger.info(f"Finishing queue, shutdown reason: {shutdown_reason}")
         await self.log_queue.put(None)
         # Wait for any pending writes to complete
         await asyncio.sleep(0.1)  # Small delay to ensure queue processing
@@ -136,3 +140,57 @@ class DataUtils:
                 
         except Exception as e:
             logger.error(f"Error sending question to frontend: {e}")
+
+    async def reset_code_editor(self) -> None:
+        """
+        Reset the code editor and interview state.
+        Clears the editor and resets timer.
+        """
+        try:
+            # Reset the code editor to empty (will show placeholder)
+            code_payload = json.dumps({
+                "type": "question_data",
+                "data": {
+                    "description": "",
+                    "skeleton_code": ""
+                }
+            }).encode('utf-8')
+            
+            await self.interview_controller.room.local_participant.publish_data(
+                code_payload,
+                topic="question-data"
+            )
+            
+            # Also clear the file watcher
+            self.interview_controller.file_watcher.write_content("")
+            
+            # Reset interview timer
+            if self.interview_controller.question:
+                duration_minutes = self.interview_controller.question.duration
+                await self.interview_controller.start_interview_timer(duration_minutes)
+                
+                # Notify frontend about reset
+                payload = json.dumps({
+                    "type": "interview_reset",
+                    "data": {
+                        "questionId": self.interview_controller.question.id,
+                        "questionTitle": self.interview_controller.question.title,
+                        "durationMinutes": duration_minutes,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                }).encode('utf-8')
+                
+                await self.interview_controller.room.local_participant.publish_data(
+                    payload,
+                    topic="interview-status"
+                )
+                
+                # Clear transcription logs if needed
+                self.log_queue = asyncio.Queue()
+                
+                logger.info("Code editor and interview state reset")
+            else:
+                logger.error("Cannot reset code editor: No question available")
+                
+        except Exception as e:
+            logger.error(f"Error resetting code editor: {e}")

@@ -5,29 +5,26 @@ from pathlib import Path
 from aiofile import async_open
 from dotenv import load_dotenv
 from livekit import rtc
-from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, Agent, cli, llm
-from livekit.plugins import openai, silero
+from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, Agent, cli, llm, RoomInputOptions
+from livekit.plugins import openai, silero, noise_cancellation
 from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
 from rich.console import Console
-from components.interview_controller import InterviewStage, InterviewController
+from components.interview_controller import InterviewController
 from utils.template_utils import load_template, save_prompt
 from components.agents.intro_agent import IntroAgent
 import os
 import logging
 from livekit.rtc import DataPacket
 from utils.data_utils import DataUtils
-from utils.shared_state import set_interview_controller
-
+from utils.shared_state import set_state
 
 console = Console()
+logger = logging.getLogger(__name__)
 load_dotenv()
 
-QUESTION_NUMBER = 1
+QUESTION_NUMBER = 0
 PATH = "testing/test_files"
-
-logger = logging.getLogger(__name__)
-
 
 async def entrypoint(ctx: JobContext):
 
@@ -38,8 +35,8 @@ async def entrypoint(ctx: JobContext):
     question_manager = QuestionManager(Path(PATH))
     interview_controller = InterviewController(question_manager)
     interview_controller.room = ctx.room
-    set_interview_controller(interview_controller)
     data_utils = DataUtils(interview_controller)
+    set_state(data_utils, interview_controller)
 
     # Initialize the interview state
     question = question_manager.select_question(QUESTION_NUMBER)
@@ -48,17 +45,18 @@ async def entrypoint(ctx: JobContext):
     asyncio.create_task(interview_controller.start_time_updates(ctx.room))
 
     intro_agent = IntroAgent()
-    data_utils.agent = intro_agent
 
     session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
         llm=openai.LLM(),
         tts=openai.TTS(),
-        allow_interruptions=False
+        allow_interruptions=False,
     )
 
-    await session.start(room=ctx.room, agent=intro_agent)
+    await session.start(room=ctx.room, agent=intro_agent, room_input_options=RoomInputOptions(
+            noise_cancellation=noise_cancellation.BVC(),
+        ),)
     
     # Start the file watcher
     interview_controller.file_watcher.start_watching()

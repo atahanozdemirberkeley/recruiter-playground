@@ -102,8 +102,18 @@ export default function Playground({
             isSelf: true,
           },
         ]);
-      } else if (decoded.type === "question_text") {
-        setUserCode(decoded.text);
+      } else if (decoded.type === "question_data" && msg.topic === "question-data") {
+        // Handle the question description and skeleton separately
+        const { description, skeleton_code } = decoded.data;
+        
+        // Create formatted code with description at the top and skeleton below
+        const formattedCode = `# ${description.split('\n').join('\n# ')}\n\n${skeleton_code || ''}`;
+        
+        // Set the code in the editor
+        setUserCode(formattedCode);
+      } else if (decoded.type === "test_results") {
+        // Handle test results if needed
+        console.log("Test results received:", decoded.data);
       }
     },
     [transcripts, setUserCode, userCode]

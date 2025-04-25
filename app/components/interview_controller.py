@@ -2,7 +2,6 @@ from enum import Enum
 from typing import List, Dict, Optional, Union
 from components.question_manager import QuestionManager, Question
 import json
-from utils.template_utils import load_template, save_prompt
 from livekit.plugins.openai import LLM
 from livekit.agents import llm
 from datetime import datetime, timedelta
@@ -12,32 +11,12 @@ from livekit import rtc
 from components.filewatcher import FileWatcher
 from components.code_executor import CodeExecutor
 from utils.config import DOCKER_API_BASE_URL
+from utils.shared_state import get_data_utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 TEST_FILE_PATH = "testing/test.py"
-class InterviewStage(Enum):
-    INTRO = "intro"
-    CODING = "coding"
-    CONCLUSION = "conclusion"
-
-    def get_stage_prompt(self) -> str:
-        """
-        Load the stage-specific prompt from templates/stages/template_{stage_name}.txt
-
-        Returns:
-            str: The stage-specific instructions and questions
-        """
-        try:
-            template_path = f"templates/stages/template_{self.value}"
-            return load_template(template_path)
-        except FileNotFoundError:
-            logger.error(f"Stage template not found for {self.value}")
-            # Return default instructions if template not found
-            raise ValueError(f"Stage template not found for {self.value}")
-
-
 class InterviewController:
     def __init__(self, question_manager: QuestionManager):
         self.question_manager = question_manager
@@ -45,7 +24,6 @@ class InterviewController:
         
         # Properties from former InterviewState
         self.question = None
-        self.current_stage = None
         self.code_snapshots = {}  # {id: {"code": str, "timestamp": int}}
         self.start_time = None
         self.stage_timestamps = {}
@@ -85,15 +63,13 @@ class InterviewController:
     def initialize_interview(self, question: Question):
         """Initialize the interview with the selected question"""
         self.question = question
-        self.current_stage = InterviewStage.INTRO
         self.code_snapshots = {}
         self.start_time = datetime.now()
         self.end_time = datetime.now() + timedelta(minutes=self.question.duration)
+        asyncio.create_task(get_data_utils().reset_code_editor()) 
         logger.info(
             f"Interview initialized with duration: {self.question.duration} minutes")
-
-    def get_system_prompt(self) -> str:
-        return self._generate_stage_prompt()
+        
 
     def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """
@@ -223,3 +199,60 @@ class InterviewController:
             'passed_tests': passed_tests,
             'failed_tests': total_tests - passed_tests
         }
+
+    async def finish_interview(self) -> None:
+        """
+        Finalize the interview process, record data, and clean up resources.
+        
+        Returns:
+            Dict: Summary of the interview including duration, test results, and stage data
+        """
+        # Record completion time
+        completion_time = datetime.now()
+        self.end_time = completion_time
+        
+        # Calculate duration
+        total_duration_seconds = int((completion_time - self.start_time).total_seconds())
+        hours = total_duration_seconds // 3600
+        minutes = (total_duration_seconds % 3600) // 60
+        seconds = total_duration_seconds % 60
+        formatted_duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        
+        # Prepare summary data
+        interview_summary = {
+            "question_id": self.question.id,
+            "question_title": self.question.title,
+            "duration": {
+                "seconds": total_duration_seconds,
+                "formatted": formatted_duration
+            },
+            "stages": self.stage_timestamps,
+            "code_snapshots_count": len(self.code_snapshots),
+            "completed": True
+        }
+        
+        
+        # Clean up resources
+        # self.cleanup()
+        
+        # Log completion
+        logger.info(f"Interview completed in {formatted_duration}")
+        
+        # Publish completion to room if available
+        if self.room:
+            try:
+                payload = json.dumps({
+                    "event": "interview_completed",
+                    "summary": interview_summary
+                }).encode('utf-8')
+                
+                asyncio.create_task(
+                    self.room.local_participant.publish_data(
+                        payload,
+                        topic="interview-status"
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Error publishing interview completion: {e}")
+        
+        return
