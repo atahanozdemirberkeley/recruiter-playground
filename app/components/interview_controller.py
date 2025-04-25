@@ -12,6 +12,7 @@ from components.filewatcher import FileWatcher
 from components.code_executor import CodeExecutor
 from utils.config import DOCKER_API_BASE_URL
 from utils.shared_state import get_data_utils
+import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,6 +22,7 @@ class InterviewController:
     def __init__(self, question_manager: QuestionManager):
         self.question_manager = question_manager
         self.room = None
+        self.current_agent = None
         
         # Properties from former InterviewState
         self.question = None
@@ -42,6 +44,10 @@ class InterviewController:
         # self.code_executor = CodeExecutor()
         # logger.info(
         #     f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
+        
+        # Activity tracking
+        self.last_activity_time = time.time()
+        self.heartbeat_interval = 45  # seconds
 
     def get_file_watcher(self) -> FileWatcher:
         """Get the FileWatcher instance"""
@@ -50,6 +56,7 @@ class InterviewController:
     def handle_code_update(self, code: str) -> bool:
         """Handle code updates from the frontend"""
         try:
+            self.last_activity_time = time.time()  # Update activity time
             success = self.file_watcher.write_content(code)
             if not success:
                 logger.error("Failed to write code update to test.py")
@@ -66,6 +73,7 @@ class InterviewController:
         self.code_snapshots = {}
         self.start_time = datetime.now()
         self.end_time = datetime.now() + timedelta(minutes=self.question.duration)
+        self.last_activity_time = time.time()
         asyncio.create_task(get_data_utils().reset_code_editor()) 
         logger.info(
             f"Interview initialized with duration: {self.question.duration} minutes")
@@ -256,3 +264,65 @@ class InterviewController:
                 logger.error(f"Error publishing interview completion: {e}")
         
         return
+        
+    async def start_heartbeat(self):
+        """
+        Start the heartbeat task that checks for user inactivity.
+        If the user is inactive for longer than the heartbeat interval,
+        the agent will be triggered to interact.
+        """
+        logger.info(f"Starting heartbeat with interval of {self.heartbeat_interval} seconds")
+        while True:
+            try:
+                current_time = time.time()
+                idle_time = current_time - self.last_activity_time
+                
+                # Check if user has been inactive
+                if idle_time > self.heartbeat_interval:
+                    logger.info(f"User has been inactive for {idle_time:.1f} seconds, triggering agent interaction")
+                    await self.trigger_heartbeat_interaction()
+                    # Reset the activity time to avoid multiple triggers in a row
+                    self.last_activity_time = current_time
+                
+                # Wait before next check
+                await asyncio.sleep(5)  # Check every 5 seconds
+            except Exception as e:
+                logger.error(f"Error in heartbeat task: {e}")
+                await asyncio.sleep(5)  # Continue despite errors
+    
+    async def trigger_heartbeat_interaction(self):
+        """Trigger the agent to interact with the user during inactivity."""
+        try:
+            # Get context info
+            current_code = self.file_watcher._take_snapshot()
+            interview_time = self.get_interview_time_since_start(formatted=True)
+            time_left = self.get_interview_time_left(formatted=True)
+            
+            # Create a system message with key context
+            heartbeat_context = f"""
+            [SYSTEM NOTE: The user has been inactive for over {self.heartbeat_interval} seconds.
+            Current interview time: {interview_time}
+            Time remaining: {time_left}
+            
+            Current code:
+            ```python
+            {current_code}
+            ```
+            
+            Check if the user needs help. If code seems incomplete or has issues, ask if they're stuck.
+            If they seem to be making good progress but just thinking, encourage them to continue.
+            Keep your response brief and supportive.]
+            """
+            
+            # Update agent context
+            agent = self.current_agent
+            chat_ctx = agent.chat_ctx.copy()
+            chat_ctx.add_message(role="system", content=heartbeat_context)
+            await agent.update_chat_ctx(chat_ctx)
+            
+            # Say something to the user
+            await agent.session.say("I notice you've been quiet for a bit. How are you doing with the problem?")
+            
+            logger.info("Heartbeat triggered")
+        except Exception as e:
+            logger.error(f"Error in heartbeat: {e}")

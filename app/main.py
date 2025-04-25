@@ -1,17 +1,11 @@
 import asyncio
-import json
-from datetime import datetime
 from pathlib import Path
-from aiofile import async_open
 from dotenv import load_dotenv
-from livekit import rtc
-from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, Agent, cli, llm, RoomInputOptions
+from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, cli, llm, RoomInputOptions
 from livekit.plugins import openai, silero, noise_cancellation
-from components.filewatcher import FileWatcher
 from components.question_manager import QuestionManager
 from rich.console import Console
 from components.interview_controller import InterviewController
-from utils.template_utils import load_template, save_prompt
 from components.agents.intro_agent import IntroAgent
 import os
 import logging
@@ -23,7 +17,7 @@ console = Console()
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-QUESTION_NUMBER = 0
+QUESTION_NUMBER = 2
 PATH = "testing/test_files"
 
 async def entrypoint(ctx: JobContext):
@@ -45,6 +39,7 @@ async def entrypoint(ctx: JobContext):
     asyncio.create_task(interview_controller.start_time_updates(ctx.room))
 
     intro_agent = IntroAgent()
+    interview_controller.current_agent = intro_agent
 
     session = AgentSession(
         vad=silero.VAD.load(),
@@ -61,6 +56,10 @@ async def entrypoint(ctx: JobContext):
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
     asyncio.create_task(data_utils.write_transcription())
+    
+    # Start the heartbeat task to check for user inactivity
+    asyncio.create_task(interview_controller.start_heartbeat())
+    
     ctx.add_shutdown_callback(data_utils.finish_queue)
 
     ########### START EVENT LISTENERS ###########

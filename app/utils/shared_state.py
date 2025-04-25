@@ -1,5 +1,9 @@
 """Shared state management"""
 
+# Remove all imports that could cause circular references
+# from components.interview_controller import InterviewController
+# from utils.data_utils import DataUtils
+
 _interview_controller = None
 _data_utils = None
 
@@ -16,3 +20,5 @@ def get_interview_controller():
 def get_data_utils():
     """Get the shared data utils instance"""
     return _data_utils
+
+
