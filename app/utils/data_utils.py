@@ -107,3 +107,32 @@ class DataUtils:
         await self.log_queue.put(None)
         # Wait for any pending writes to complete
         await asyncio.sleep(0.1)  # Small delay to ensure queue processing
+
+    async def send_question_to_frontend(self) -> None:
+        """Send question description and skeleton code to the frontend code editor."""
+        try:
+            question = self.interview_controller.question
+            if not question:
+                logger.error("No question available to send to frontend")
+                return
+                
+            payload = json.dumps({
+                "type": "question_data",
+                "data": {
+                    "description": question.description,
+                    "skeleton_code": question.skeleton_code
+                }
+            }).encode('utf-8')
+
+            await self.interview_controller.room.local_participant.publish_data(
+                payload,
+                topic="question-data"
+            )
+            logger.info("Question data sent to frontend")
+            
+            # Update the file watcher with skeleton code if available
+            if hasattr(question, 'skeleton_code') and question.skeleton_code:
+                self.interview_controller.file_watcher.write_content(question.skeleton_code)
+                
+        except Exception as e:
+            logger.error(f"Error sending question to frontend: {e}")

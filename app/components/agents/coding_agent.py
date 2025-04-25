@@ -17,7 +17,6 @@ class CodingAgent(Agent):
     def __init__(self):
         self.interview_controller = get_interview_controller()
         question_prompt = self.interview_controller.question_manager.get_question_prompt(self.interview_controller.question.id)
-        
         template = load_template('template_coding_agent')
         self.template = template.format(QUESTION=question_prompt)
         super().__init__(

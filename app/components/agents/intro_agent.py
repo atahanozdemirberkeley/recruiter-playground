@@ -3,6 +3,7 @@ from utils.template_utils import load_template
 from utils.shared_state import get_interview_controller
 from components.tools import get_interview_time_left
 from components.agents.coding_agent import CodingAgent
+from utils.data_utils import DataUtils
 
 class IntroAgent(Agent):
     """
@@ -34,7 +35,10 @@ class IntroAgent(Agent):
         """Hand off to the coding agent when the introduction is complete and
         the candidate is ready to start the coding portion of the interview.
         """
-        await self.session.say("Great! We can now move on to the coding portion of the interview.")
+        # Send question data to frontend for code editor
+        data_utils = self.interview_controller.data_utils
+        await data_utils.send_question_to_frontend()
+        
         return CodingAgent()
     
     

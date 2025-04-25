@@ -4,12 +4,12 @@ from typing import Optional
 from components.interview_controller import InterviewController
 
 class SharedState:
-    interview_controller: Optional[InterviewController] = None
+    interview_controller: InterviewController = None
 
 shared_state = SharedState()
 
 def set_interview_controller(interview_controller: InterviewController):
     shared_state.interview_controller = interview_controller
 
-def get_interview_controller() -> Optional[InterviewController]:
+def get_interview_controller() -> InterviewController:
     return shared_state.interview_controller
