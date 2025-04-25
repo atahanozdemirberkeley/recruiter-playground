@@ -43,7 +43,7 @@ class QuestionManager:
         """Get a question by its ID."""
         return self.questions.get(question_id)
 
-    def complete_prompt(self, question_id: str) -> str:
+    def get_question_prompt(self, question_id: str) -> str:
         """
         Provide the information to complete the agent prompt for the question
         """
@@ -106,5 +106,5 @@ class QuestionManager:
 
         selected_id = question_ids[idx]
         selected_question = self.questions[selected_id]
-        selected_question.prompt = self.complete_prompt(selected_id)
+        selected_question.prompt = self.get_question_prompt(selected_id)
         return selected_question

@@ -17,6 +17,7 @@ import os
 import logging
 from livekit.rtc import DataPacket
 from utils.data_utils import DataUtils
+from utils.shared_state import set_interview_controller
 
 
 console = Console()
@@ -37,6 +38,7 @@ async def entrypoint(ctx: JobContext):
     question_manager = QuestionManager(Path(PATH))
     interview_controller = InterviewController(question_manager)
     interview_controller.room = ctx.room
+    set_interview_controller(interview_controller)
     data_utils = DataUtils(interview_controller)
 
     # Initialize the interview state
@@ -53,6 +55,7 @@ async def entrypoint(ctx: JobContext):
         stt=openai.STT(),
         llm=openai.LLM(),
         tts=openai.TTS(),
+        allow_interruptions=False
     )
 
     await session.start(room=ctx.room, agent=intro_agent)

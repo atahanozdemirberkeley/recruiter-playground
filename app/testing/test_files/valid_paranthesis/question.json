@@ -4,7 +4,7 @@
     "title": "Valid Parentheses",
     "difficulty": "medium",
     "category": "stack",
-    "duration": 60,
+    "duration": 45,
     "hints": [
       "Think about how you can use a stack data structure",
       "Consider what happens when you encounter a closing bracket",

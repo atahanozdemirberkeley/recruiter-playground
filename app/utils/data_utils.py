@@ -7,12 +7,12 @@ from livekit.agents import llm
 from typing import Optional, Callable, Any, Dict
 from pathlib import Path
 from aiofile import async_open
-
+from components.interview_controller import InterviewController
 logger = logging.getLogger(__name__)
 
 
 class DataUtils:
-    def __init__(self, interview_controller, log_file_path="transcriptions.log"):
+    def __init__(self, interview_controller: InterviewController, log_file_path="transcriptions.log"):
         self.interview_controller = interview_controller
         self.log_queue = asyncio.Queue()
         self.log_file_path = log_file_path
