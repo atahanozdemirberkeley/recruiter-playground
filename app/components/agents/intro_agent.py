@@ -21,7 +21,7 @@ class IntroAgent(Agent):
 
     async def on_enter(self):
         """Send the initial greeting to the user"""
-        await self.send_message(
+        await self.session.say(
             """Hello, and welcome to this AI-powered technical interview. 
             I'm here to help you through this interview process.
             Today, you'll be solving a coding problem similar to what you might encounter in real technical interviews.
@@ -34,7 +34,7 @@ class IntroAgent(Agent):
         """Hand off to the coding agent when the introduction is complete and
         the candidate is ready to start the coding portion of the interview.
         """
-        await self.send_message("Great! I'll now hand you over to our coding specialist who will guide you through the technical portion of the interview.")
+        await self.session.say("Great! We can now move on to the coding portion of the interview.")
         return CodingAgent()
     
     
