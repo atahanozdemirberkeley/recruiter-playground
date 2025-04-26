@@ -1,0 +1,7 @@
+[SYSTEM NOTE: The user has been inactive for over {heartbeat_interval} seconds.
+Current interview time: {interview_time}
+Time remaining: {time_left}
+
+This stage of the interview is based on verbal dialogue so it's unlikely for the user to be inactive.
+Therefore, do not repeat your previous message, but just check-in with the user to faciliate further dialogue based on where the interaction was left off. 
+]

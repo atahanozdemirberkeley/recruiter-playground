@@ -20,7 +20,6 @@ class DataUtils:
 
     async def process_data_packet(self, packet: DataPacket) -> None:
         """Process incoming data packets from the room."""
-        self.interview_controller.last_activity_time = time.time()  # Update activity time
         try:
             payload_str = packet.data.decode("utf-8")
             payload = json.loads(payload_str)
@@ -51,7 +50,6 @@ class DataUtils:
 
     async def send_results_to_frontend(self, results: Dict) -> None:
         """Send test results back to frontend"""
-        self.interview_controller.last_activity_time = time.time()  # Update activity time
         try:
             payload = json.dumps({
                 "type": "test_results",
@@ -66,10 +64,7 @@ class DataUtils:
             logger.error(f"Error sending results to frontend: {e}")
 
     async def handle_user_speech(self, msg: llm.ChatMessage) -> None:
-        """Handle user speech events."""
-        # update the interview controller's last activity time
-        self.interview_controller.last_activity_time = time.time()
-        
+        """Handle user speech events."""        
         # Take code snapshot
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
         # Update to access code_snapshots directly on interview_controller
@@ -86,9 +81,6 @@ class DataUtils:
 
     async def handle_agent_speech(self, msg: llm.ChatMessage) -> None:
         """Handle agent speech events."""
-        # update the interview controller's last activity time
-        self.interview_controller.last_activity_time = time.time()
-        
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
         duration = self.interview_controller.get_interview_time_since_start()
         await self.log_queue.put(

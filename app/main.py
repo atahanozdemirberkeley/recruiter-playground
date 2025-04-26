@@ -20,10 +20,15 @@ load_dotenv()
 QUESTION_NUMBER = 2
 PATH = "testing/test_files"
 
+
 async def entrypoint(ctx: JobContext):
+
+    logger.info("[DEBUG] Starting entrypoint")
 
     # Connect to room
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+
+    logger.info("[DEBUG] Connected to room")
 
     # Initialize components
     question_manager = QuestionManager(Path(PATH))
@@ -49,35 +54,28 @@ async def entrypoint(ctx: JobContext):
         allow_interruptions=False,
     )
 
+    # Start the session - the Agent class will handle speech events internally
     await session.start(room=ctx.room, agent=intro_agent, room_input_options=RoomInputOptions(
-            noise_cancellation=noise_cancellation.BVC(),
-        ),)
-    
+        noise_cancellation=noise_cancellation.BVC(),
+    ),)
+
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
     asyncio.create_task(data_utils.write_transcription())
-    
-    # Start the heartbeat task to check for user inactivity
     asyncio.create_task(interview_controller.start_heartbeat())
-    
-    ctx.add_shutdown_callback(data_utils.finish_queue)
 
     ########### START EVENT LISTENERS ###########
 
-    @session.on("user_speech_committed")
-    def on_user_speech_committed(msg: llm.ChatMessage):
-        asyncio.create_task(data_utils.handle_user_speech(msg))
+    # Attach an event listener for data packets from frontend
 
-    @session.on("agent_speech_committed")
-    def on_agent_speech_committed(msg: llm.ChatMessage):
-        asyncio.create_task(data_utils.handle_agent_speech(msg))
-
-    # 2) Attach an event listener for data packets
     @ctx.room.on("data_received")
     def handle_data_received(packet: DataPacket):
         asyncio.create_task(data_utils.process_data_packet(packet))
 
     ########### END EVENT LISTENERS ###########
+
+    # Add shutdown callback for transcription writing
+    ctx.add_shutdown_callback(data_utils.finish_queue)
 
     # Keep the agent running
     while True:

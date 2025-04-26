@@ -1,36 +1,36 @@
-from enum import Enum
-from typing import List, Dict, Optional, Union
+from typing import Dict, Optional, Union
 from components.question_manager import QuestionManager, Question
 import json
-from livekit.plugins.openai import LLM
-from livekit.agents import llm
 from datetime import datetime, timedelta
 import asyncio
 import logging
-from livekit import rtc
 from components.filewatcher import FileWatcher
-from components.code_executor import CodeExecutor
-from utils.config import DOCKER_API_BASE_URL
 from utils.shared_state import get_data_utils
 import time
+from livekit.agents.llm import ChatMessage, ChatChunk, ChatContext
+from livekit.agents.voice import ModelSettings
+from utils.template_utils import load_template
+from tools import get_file_snapshot
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 TEST_FILE_PATH = "testing/test.py"
+
+
 class InterviewController:
     def __init__(self, question_manager: QuestionManager):
         self.question_manager = question_manager
         self.room = None
         self.current_agent = None
-        
+
         # Properties from former InterviewState
         self.question = None
         self.code_snapshots = {}  # {id: {"code": str, "timestamp": int}}
         self.start_time = None
         self.stage_timestamps = {}
         self.end_time = None
-        
+
         # Other controller properties
         # self.llm = LLM(
         #     model="gpt-4",
@@ -44,10 +44,13 @@ class InterviewController:
         # self.code_executor = CodeExecutor()
         # logger.info(
         #     f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
-        
+
         # Activity tracking
-        self.last_activity_time = time.time()
         self.heartbeat_interval = 45  # seconds
+        self._heartbeat_task: Optional[asyncio.Task] = None
+
+        # Speech activity tracking
+        self.is_speech_active = False
 
     def get_file_watcher(self) -> FileWatcher:
         """Get the FileWatcher instance"""
@@ -56,7 +59,6 @@ class InterviewController:
     def handle_code_update(self, code: str) -> bool:
         """Handle code updates from the frontend"""
         try:
-            self.last_activity_time = time.time()  # Update activity time
             success = self.file_watcher.write_content(code)
             if not success:
                 logger.error("Failed to write code update to test.py")
@@ -74,10 +76,9 @@ class InterviewController:
         self.start_time = datetime.now()
         self.end_time = datetime.now() + timedelta(minutes=self.question.duration)
         self.last_activity_time = time.time()
-        asyncio.create_task(get_data_utils().reset_code_editor()) 
+        asyncio.create_task(get_data_utils().reset_code_editor())
         logger.info(
             f"Interview initialized with duration: {self.question.duration} minutes")
-        
 
     def get_interview_time_since_start(self, formatted: bool = False) -> Union[int, str]:
         """
@@ -152,7 +153,7 @@ class InterviewController:
         Returns: snapshot_id
         """
         snapshot_id = f"snapshot_{len(self.code_snapshots)}"
-        
+
         self.code_snapshots[snapshot_id] = {
             "code": code,
             "timestamp": self.get_interview_time_since_start(formatted=False)
@@ -211,21 +212,22 @@ class InterviewController:
     async def finish_interview(self) -> None:
         """
         Finalize the interview process, record data, and clean up resources.
-        
+
         Returns:
             Dict: Summary of the interview including duration, test results, and stage data
         """
         # Record completion time
         completion_time = datetime.now()
         self.end_time = completion_time
-        
+
         # Calculate duration
-        total_duration_seconds = int((completion_time - self.start_time).total_seconds())
+        total_duration_seconds = int(
+            (completion_time - self.start_time).total_seconds())
         hours = total_duration_seconds // 3600
         minutes = (total_duration_seconds % 3600) // 60
         seconds = total_duration_seconds % 60
         formatted_duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-        
+
         # Prepare summary data
         interview_summary = {
             "question_id": self.question.id,
@@ -238,14 +240,13 @@ class InterviewController:
             "code_snapshots_count": len(self.code_snapshots),
             "completed": True
         }
-        
-        
+
         # Clean up resources
         # self.cleanup()
-        
+
         # Log completion
         logger.info(f"Interview completed in {formatted_duration}")
-        
+
         # Publish completion to room if available
         if self.room:
             try:
@@ -253,7 +254,7 @@ class InterviewController:
                     "event": "interview_completed",
                     "summary": interview_summary
                 }).encode('utf-8')
-                
+
                 asyncio.create_task(
                     self.room.local_participant.publish_data(
                         payload,
@@ -262,67 +263,90 @@ class InterviewController:
                 )
             except Exception as e:
                 logger.error(f"Error publishing interview completion: {e}")
-        
+
         return
-        
+
+    def update_activity_timestamp(self):
+        """Update the last activity timestamp to the current time"""
+        self.last_activity_time = time.time()
+
+    def pause_heartbeat_timer(self):
+        """Pause the heartbeat timer by setting speech active flag"""
+        self.is_speech_active = True
+        logger.info("Heartbeat timer paused - speech active")
+
+    def resume_heartbeat_timer(self):
+        """Resume the heartbeat timer and update the activity timestamp"""
+        self.is_speech_active = False
+        self.update_activity_timestamp()
+        logger.info("Heartbeat timer resumed - speech ended")
+
     async def start_heartbeat(self):
         """
         Start the heartbeat task that checks for user inactivity.
         If the user is inactive for longer than the heartbeat interval,
         the agent will be triggered to interact.
         """
-        logger.info(f"Starting heartbeat with interval of {self.heartbeat_interval} seconds")
+        logger.info(
+            f"[DEBUG - interview_controller.py] Starting heartbeat with interval of {self.heartbeat_interval} seconds")
         while True:
             try:
                 current_time = time.time()
-                idle_time = current_time - self.last_activity_time
-                
-                # Check if user has been inactive
-                if idle_time > self.heartbeat_interval:
-                    logger.info(f"User has been inactive for {idle_time:.1f} seconds, triggering agent interaction")
-                    await self.trigger_heartbeat_interaction()
-                    # Reset the activity time to avoid multiple triggers in a row
-                    self.last_activity_time = current_time
-                
+
+                # Skip inactivity check if speech is active
+                if not self.is_speech_active:
+                    idle_time = current_time - self.last_activity_time
+
+                    # Check if user has been inactive
+                    if idle_time > self.heartbeat_interval:
+                        logger.info(
+                            f"User has been inactive for {idle_time:.1f} seconds, triggering agent interaction")
+                        await self.trigger_heartbeat_interaction(self.current_agent)
+                        # Reset the activity time to avoid multiple triggers in a row
+                        self.last_activity_time = current_time
+
                 # Wait before next check
                 await asyncio.sleep(5)  # Check every 5 seconds
+            except asyncio.CancelledError:
+                logger.info("Heartbeat task cancelled")
+                break
             except Exception as e:
                 logger.error(f"Error in heartbeat task: {e}")
                 await asyncio.sleep(5)  # Continue despite errors
-    
-    async def trigger_heartbeat_interaction(self):
+
+    async def trigger_heartbeat_interaction(self, agent):
         """Trigger the agent to interact with the user during inactivity."""
         try:
-            # Get context info
-            current_code = self.file_watcher._take_snapshot()
-            interview_time = self.get_interview_time_since_start(formatted=True)
-            time_left = self.get_interview_time_left(formatted=True)
-            
-            # Create a system message with key context
-            heartbeat_context = f"""
-            [SYSTEM NOTE: The user has been inactive for over {self.heartbeat_interval} seconds.
-            Current interview time: {interview_time}
-            Time remaining: {time_left}
-            
-            Current code:
-            ```python
-            {current_code}
-            ```
-            
-            Check if the user needs help. If code seems incomplete or has issues, ask if they're stuck.
-            If they seem to be making good progress but just thinking, encourage them to continue.
-            Keep your response brief and supportive.]
-            """
-            
-            # Update agent context
-            agent = self.current_agent
-            chat_ctx = agent.chat_ctx.copy()
-            chat_ctx.add_message(role="system", content=heartbeat_context)
-            await agent.update_chat_ctx(chat_ctx)
-            
-            # Say something to the user
-            await agent.session.say("I notice you've been quiet for a bit. How are you doing with the problem?")
-            
-            logger.info("Heartbeat triggered")
+            logger.info("[DEBUG] Triggering heartbeat interaction")
+
+            # Use the agent's get_heartbeat_context method
+            heartbeat_context = agent.get_heartbeat_context()
+
+            logger.info(f"[HB] heartbeat_context: {heartbeat_context}")
+            ctx = self.current_agent.chat_ctx.copy()
+            ctx.add_message(
+                role="system",
+                content=heartbeat_context
+            )
+
+            # TODO Can abstract into a "strea_to_text" function
+            generated_text = ""
+            async for chunk in self.current_agent.llm_node(ctx, tools=[], model_settings=ModelSettings()):
+                if isinstance(chunk, ChatChunk):
+                    # Check delta and content are not None before adding
+                    if chunk.delta and chunk.delta.content:
+                        generated_text += chunk.delta.content
+                else:
+                    # If it's not a ChatChunk, ensure it's a string before adding
+                    generated_text += str(chunk) if chunk is not None else ""
+
+            logger.info("[HB] raw reply -> %r", generated_text)
+
+            if generated_text.strip() != "<SILENCE>":
+                await self.current_agent.session.say(generated_text)
+                logger.info("[HB] response spoken")
+            else:
+                logger.info("[HB] response suppressed")
+
         except Exception as e:
             logger.error(f"Error in heartbeat: {e}")
