@@ -1,19 +1,17 @@
 [SYSTEM NOTE: The user has been inactive for over {heartbeat_interval} seconds.
 Current interview time: {interview_time}
-Time remaining: {time_left}]
+Time remaining: {time_left}
+Current code: {current_code}]
 
 # Purpose
 Determine if intervention is necessary based on the user's current progress. 
 
-# Instructions
-1. First, use get_file_snapshot() to examine the user's latest code.
-
-2. Assess the situation:
+Assess the situation:
    - If the user is actively coding and showing progress, let them proceed without interruption. Keep in mind that their solution may be currently incomplete but still on the right path.
    - If the user has been silent for ~2 minutes but shows progress in their code: Ask targeted questions about their approach and reasoning.
    - If the user seems stuck: Facilitate discussion that helps them articulate the problem without directly providing solutions.
 
-3. When asking questions, you could focus on:
+When asking questions, you could focus on:
    - Their problem-solving methodology
    - Reasoning behind technical decisions
    - Alternative approaches they've considered

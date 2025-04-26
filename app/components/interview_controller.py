@@ -10,6 +10,7 @@ import time
 from livekit.agents.llm import ChatMessage, ChatChunk, ChatContext
 from livekit.agents.voice import ModelSettings
 from utils.template_utils import load_template
+from tools import get_file_snapshot
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

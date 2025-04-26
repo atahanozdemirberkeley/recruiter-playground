@@ -81,12 +81,15 @@ class CodingAgent(Agent):
             time_left = self.interview_controller.get_interview_time_left(
                 formatted=True)
             heartbeat_interval = self.interview_controller.heartbeat_interval
+            self.interview_controller.file_watcher._take_snapshot()
+            code_snapshot = self.interview_controller.file_watcher.last_snapshot
 
             # Format the template with context
             return template.format(
                 heartbeat_interval=heartbeat_interval,
                 interview_time=interview_time,
-                time_left=time_left
+                time_left=time_left,
+                current_code=code_snapshot
             )
         except Exception as e:
             logger.error(
