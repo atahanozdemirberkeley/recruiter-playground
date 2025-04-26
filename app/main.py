@@ -62,10 +62,12 @@ async def entrypoint(ctx: JobContext):
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
     asyncio.create_task(data_utils.write_transcription())
+    asyncio.create_task(interview_controller.start_heartbeat())
 
     ########### START EVENT LISTENERS ###########
 
     # Attach an event listener for data packets from frontend
+
     @ctx.room.on("data_received")
     def handle_data_received(packet: DataPacket):
         asyncio.create_task(data_utils.process_data_packet(packet))

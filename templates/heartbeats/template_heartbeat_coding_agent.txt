@@ -1,0 +1,25 @@
+[SYSTEM NOTE: The user has been inactive for over {heartbeat_interval} seconds.
+Current interview time: {interview_time}
+Time remaining: {time_left}]
+
+# Purpose
+Determine if intervention is necessary based on the user's current progress. 
+
+# Instructions
+1. First, use get_file_snapshot() to examine the user's latest code.
+
+2. Assess the situation:
+   - If the user is actively coding and showing progress, let them proceed without interruption. Keep in mind that their solution may be currently incomplete but still on the right path.
+   - If the user has been silent for ~2 minutes but shows progress in their code: Ask targeted questions about their approach and reasoning.
+   - If the user seems stuck: Facilitate discussion that helps them articulate the problem without directly providing solutions.
+
+3. When asking questions, you could focus on:
+   - Their problem-solving methodology
+   - Reasoning behind technical decisions
+   - Alternative approaches they've considered
+   - Challenges they're encountering and how they're addressing them
+
+# Response Instructions
+- If intervention is NOT needed: Respond ONLY with a <SILENCE> token to allow the user to continue thinking. Do not explain why, only the token. 
+- Do NOT use any other expression or message when choosing not to interrupt.
+- If intervention IS needed: Ask a clear, specific question related to their current progress or challenge. 

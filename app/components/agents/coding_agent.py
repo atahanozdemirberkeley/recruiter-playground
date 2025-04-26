@@ -30,17 +30,66 @@ class CodingAgent(Agent):
 
         self.question = None
         self.last_code_snapshot = None
-        self.last_activity_time = None
 
-    async def on_user_turn_started(self, ctx: ChatContext) -> None:
-        """Called when user starts speaking"""
-        self.interview_controller.cancel_heartbeat_task()
-        # Update activity time
-        self.interview_controller.last_activity_time = time.time()
+    async def on_enter(self):
+        """Called when the agent enters the conversation"""
+        self.interview_controller.current_agent = self
+
+        ctx = self.interview_controller.current_agent.chat_ctx.copy()
+        ctx.add_message(
+            role="system",
+            content="Start with introducting the coding problem now"
+        )
+
+    async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:
+        """Called when user finishes speaking"""
+        asyncio.create_task(self.data_utils.handle_user_speech(new_message))
+        # Resume heartbeat timer when user finishes speaking
+        self.interview_controller.resume_heartbeat_timer()
 
     async def on_agent_turn_completed(self, response: ChatMessage) -> None:
         """Called after agent generates response"""
-        # Log the agent's response
         asyncio.create_task(self.data_utils.handle_agent_speech(response))
-        # Start heartbeat after agent finishes speaking
-        self.interview_controller.start_heartbeat_task()
+        # Resume heartbeat timer when agent finishes speaking
+        self.interview_controller.resume_heartbeat_timer()
+
+    async def on_agent_turn_started(self, turn_ctx: ChatContext) -> None:
+        """Called when agent starts speaking"""
+        # Pause heartbeat timer when agent starts speaking
+        self.interview_controller.pause_heartbeat_timer()
+
+    async def on_user_turn_started(self, turn_ctx: ChatContext) -> None:
+        """Called when user starts speaking"""
+        # Pause heartbeat timer when user starts speaking
+        self.interview_controller.pause_heartbeat_timer()
+
+    def get_heartbeat_context(self) -> str:
+        """
+        Get the heartbeat context template for the coding agent.
+
+        Returns:
+            str: Formatted heartbeat context template
+        """
+        try:
+            # Load the template specific to this agent type
+            template_path = "heartbeats/template_heartbeat_coding_agent"
+            template = load_template(template_path)
+
+            # Get context info from interview controller
+            interview_time = self.interview_controller.get_interview_time_since_start(
+                formatted=True)
+            time_left = self.interview_controller.get_interview_time_left(
+                formatted=True)
+            heartbeat_interval = self.interview_controller.heartbeat_interval
+
+            # Format the template with context
+            return template.format(
+                heartbeat_interval=heartbeat_interval,
+                interview_time=interview_time,
+                time_left=time_left
+            )
+        except Exception as e:
+            logger.error(
+                f"Error loading heartbeat template for coding agent: {e}")
+            # Fallback to a generic template
+            return ""

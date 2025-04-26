@@ -9,6 +9,7 @@ from utils.shared_state import get_data_utils
 import time
 from livekit.agents.llm import ChatMessage, ChatChunk, ChatContext
 from livekit.agents.voice import ModelSettings
+from utils.template_utils import load_template
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -44,9 +45,11 @@ class InterviewController:
         #     f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
 
         # Activity tracking
-        self.last_activity_time = time.time()
-        self.heartbeat_interval = 10  # seconds
+        self.heartbeat_interval = 45  # seconds
         self._heartbeat_task: Optional[asyncio.Task] = None
+
+        # Speech activity tracking
+        self.is_speech_active = False
 
     def get_file_watcher(self) -> FileWatcher:
         """Get the FileWatcher instance"""
@@ -55,7 +58,6 @@ class InterviewController:
     def handle_code_update(self, code: str) -> bool:
         """Handle code updates from the frontend"""
         try:
-            self.last_activity_time = time.time()  # Update activity time
             success = self.file_watcher.write_content(code)
             if not success:
                 logger.error("Failed to write code update to test.py")
@@ -263,6 +265,21 @@ class InterviewController:
 
         return
 
+    def update_activity_timestamp(self):
+        """Update the last activity timestamp to the current time"""
+        self.last_activity_time = time.time()
+
+    def pause_heartbeat_timer(self):
+        """Pause the heartbeat timer by setting speech active flag"""
+        self.is_speech_active = True
+        logger.info("Heartbeat timer paused - speech active")
+
+    def resume_heartbeat_timer(self):
+        """Resume the heartbeat timer and update the activity timestamp"""
+        self.is_speech_active = False
+        self.update_activity_timestamp()
+        logger.info("Heartbeat timer resumed - speech ended")
+
     async def start_heartbeat(self):
         """
         Start the heartbeat task that checks for user inactivity.
@@ -274,15 +291,18 @@ class InterviewController:
         while True:
             try:
                 current_time = time.time()
-                idle_time = current_time - self.last_activity_time
 
-                # Check if user has been inactive
-                if idle_time > self.heartbeat_interval:
-                    logger.info(
-                        f"User has been inactive for {idle_time:.1f} seconds, triggering agent interaction")
-                    await self.trigger_heartbeat_interaction(self.current_agent)
-                    # Reset the activity time to avoid multiple triggers in a row
-                    self.last_activity_time = current_time
+                # Skip inactivity check if speech is active
+                if not self.is_speech_active:
+                    idle_time = current_time - self.last_activity_time
+
+                    # Check if user has been inactive
+                    if idle_time > self.heartbeat_interval:
+                        logger.info(
+                            f"User has been inactive for {idle_time:.1f} seconds, triggering agent interaction")
+                        await self.trigger_heartbeat_interaction(self.current_agent)
+                        # Reset the activity time to avoid multiple triggers in a row
+                        self.last_activity_time = current_time
 
                 # Wait before next check
                 await asyncio.sleep(5)  # Check every 5 seconds
@@ -297,31 +317,18 @@ class InterviewController:
         """Trigger the agent to interact with the user during inactivity."""
         try:
             logger.info("[DEBUG] Triggering heartbeat interaction")
-            # Get context info
-            interview_time = self.get_interview_time_since_start(
-                formatted=True)
-            time_left = self.get_interview_time_left(formatted=True)
 
-            # Create a system message with key context
-            heartbeat_context = f"""
-            [SYSTEM NOTE: The user has been inactive for over {self.heartbeat_interval} seconds.
-            Current interview time: {interview_time}
-            Time remaining: {time_left}
+            # Use the agent's get_heartbeat_context method
+            heartbeat_context = agent.get_heartbeat_context()
 
-            Check if the user needs help. If code seems incomplete or has issues, ask if they're stuck.
-            If they seem to be making good progress but just thinking, encourage them to continue.
-            Keep your response brief and supportive.
-
-            If you don't think an interaction is needed right now, please respond with an empty string
-            and we will not interrupt the user's thinking time.]
-            """
-
+            logger.info(f"[HB] heartbeat_context: {heartbeat_context}")
             ctx = self.current_agent.chat_ctx.copy()
             ctx.add_message(
                 role="system",
                 content=heartbeat_context
             )
 
+            # TODO Can abstract into a "strea_to_text" function
             generated_text = ""
             async for chunk in self.current_agent.llm_node(ctx, tools=[], model_settings=ModelSettings()):
                 if isinstance(chunk, ChatChunk):
@@ -334,7 +341,7 @@ class InterviewController:
 
             logger.info("[HB] raw reply -> %r", generated_text)
 
-            if generated_text.strip():
+            if generated_text.strip() != "<SILENCE>":
                 await self.current_agent.session.say(generated_text)
                 logger.info("[HB] response spoken")
             else:
@@ -342,16 +349,3 @@ class InterviewController:
 
         except Exception as e:
             logger.error(f"Error in heartbeat: {e}")
-
-    def start_heartbeat_task(self):
-        # Start the heartbeat loop, canceling any existing heartbeat task.
-        self.cancel_heartbeat_task()
-        logger.info("Starting heartbeat task")
-        self._heartbeat_task = asyncio.create_task(self.start_heartbeat())
-
-    def cancel_heartbeat_task(self):
-        # Cancel the heartbeat task if running.
-        if self._heartbeat_task:
-            logger.info("Canceling heartbeat task")
-            self._heartbeat_task.cancel()
-            self._heartbeat_task = None
