@@ -35,10 +35,8 @@ class CodingAgent(Agent):
         """Called when the agent enters the conversation"""
         self.interview_controller.current_agent = self
 
-        ctx = self.interview_controller.current_agent.chat_ctx.copy()
-        ctx.add_message(
-            role="system",
-            content="Start with introducting the coding problem now"
+        await self.session.generate_reply(
+            instructions="Start by introducing the coding problem now.",
         )
 
     async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:

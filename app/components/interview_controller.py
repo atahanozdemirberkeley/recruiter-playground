@@ -10,7 +10,6 @@ import time
 from livekit.agents.llm import ChatMessage, ChatChunk, ChatContext
 from livekit.agents.voice import ModelSettings
 from utils.template_utils import load_template
-from tools import get_file_snapshot
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -322,14 +321,13 @@ class InterviewController:
             # Use the agent's get_heartbeat_context method
             heartbeat_context = agent.get_heartbeat_context()
 
-            logger.info(f"[HB] heartbeat_context: {heartbeat_context}")
             ctx = self.current_agent.chat_ctx.copy()
             ctx.add_message(
                 role="system",
                 content=heartbeat_context
             )
 
-            # TODO Can abstract into a "strea_to_text" function
+            # ------------ TODO Can abstract into a "stream_to_text" function ------------
             generated_text = ""
             async for chunk in self.current_agent.llm_node(ctx, tools=[], model_settings=ModelSettings()):
                 if isinstance(chunk, ChatChunk):
