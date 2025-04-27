@@ -49,7 +49,7 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
-        llm=openai.LLM(),
+        llm=openai.LLM(model="gpt-4o"),
         tts=openai.TTS(),
         allow_interruptions=False,
     )

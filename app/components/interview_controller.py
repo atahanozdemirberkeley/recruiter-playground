@@ -209,61 +209,42 @@ class InterviewController:
         }
 
     async def finish_interview(self) -> None:
-        """
-        Finalize the interview process, record data, and clean up resources.
-
-        Returns:
-            Dict: Summary of the interview including duration, test results, and stage data
-        """
-        # Record completion time
-        completion_time = datetime.now()
-        self.end_time = completion_time
-
-        # Calculate duration
-        total_duration_seconds = int(
-            (completion_time - self.start_time).total_seconds())
-        hours = total_duration_seconds // 3600
-        minutes = (total_duration_seconds % 3600) // 60
-        seconds = total_duration_seconds % 60
-        formatted_duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-        # Prepare summary data
-        interview_summary = {
-            "question_id": self.question.id,
-            "question_title": self.question.title,
-            "duration": {
-                "seconds": total_duration_seconds,
-                "formatted": formatted_duration
-            },
-            "stages": self.stage_timestamps,
-            "code_snapshots_count": len(self.code_snapshots),
-            "completed": True
-        }
-
-        # Clean up resources
-        # self.cleanup()
-
-        # Log completion
-        logger.info(f"Interview completed in {formatted_duration}")
-
-        # Publish completion to room if available
-        if self.room:
-            try:
-                payload = json.dumps({
-                    "event": "interview_completed",
-                    "summary": interview_summary
-                }).encode('utf-8')
-
-                asyncio.create_task(
-                    self.room.local_participant.publish_data(
-                        payload,
-                        topic="interview-status"
-                    )
-                )
-            except Exception as e:
-                logger.error(f"Error publishing interview completion: {e}")
-
-        return
+        """Finalize the interview and prepare for evaluation"""
+        self.end_time = datetime.now()
+        
+        # Log interview completion
+        duration = self.get_interview_time_since_start(formatted=True)
+        logger.info(f"Interview completed. Total duration: {duration}")
+        
+        # Take final code snapshot
+        final_code = self.file_watcher._take_snapshot()
+        self.add_code_snapshot(final_code)
+        
+        # Generate evaluation directly from DataUtils
+        try:
+            data_utils = get_data_utils()
+            self.evaluation_text = await data_utils.generate_candidate_evaluation()
+            logger.info(f"Candidate evaluation complete. Saved to eval_results directory.")
+        except Exception as e:
+            logger.error(f"Error evaluating candidate: {e}")
+        
+        # Notify frontend that interview is complete
+        try:
+            payload = json.dumps({
+                "type": "interview_complete",
+                "data": {
+                    "duration": duration,
+                    "questionId": self.question.id if self.question else None,
+                    "questionTitle": self.question.title if self.question else None
+                }
+            }).encode('utf-8')
+            
+            await self.room.local_participant.publish_data(
+                payload,
+                topic="interview-status"
+            )
+        except Exception as e:
+            logger.error(f"Error publishing interview completion: {e}")
 
     def update_activity_timestamp(self):
         """Update the last activity timestamp to the current time"""
