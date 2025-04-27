@@ -26,7 +26,7 @@ import {
 } from "@livekit/components-react";
 import { ConnectionState, LocalParticipant, Track } from "livekit-client";
 import { QRCodeSVG } from "qrcode.react";
-import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import tailwindTheme from "src/lib/tailwindTheme.preval";
 import { InterviewTimer } from "src/components/timer/InterviewTimer";
 import { Button } from "src/components/button/Button";
@@ -54,7 +54,12 @@ export default function Playground({
   const { name } = useRoomInfo();
   const [transcripts, setTranscripts] = useState<ChatMessageType[]>([]);
   const [userCode, setUserCode] = useState<string>("");
+  const [questionDescription, setQuestionDescription] = useState<string>("");
+  const [descriptionHeight, setDescriptionHeight] = useState<number>(200);
   const { localParticipant } = useLocalParticipant();
+  const resizingRef = useRef<boolean>(false);
+  const startYRef = useRef<number>(0);
+  const startHeightRef = useRef<number>(0);
 
   const voiceAssistant = useVoiceAssistant();
 
@@ -65,8 +70,13 @@ export default function Playground({
     if (roomState === ConnectionState.Connected) {
       localParticipant.setCameraEnabled(config.settings.inputs.camera);
       localParticipant.setMicrophoneEnabled(config.settings.inputs.mic);
+    } else if (roomState === ConnectionState.Disconnected) {
+      // Reset states when disconnected
+      setUserCode("# Waiting for question...");
+      setQuestionDescription("");
+      setTranscripts([]);
     }
-  }, [config, localParticipant, roomState]);
+  }, [config, localParticipant, roomState, setUserCode, setQuestionDescription, setTranscripts]);
 
   const agentVideoTrack = tracks.find(
     (trackRef) =>
@@ -106,8 +116,11 @@ export default function Playground({
         // Handle the question description and skeleton separately
         const { description, skeleton_code } = decoded.data;
         
-        // Create formatted code with description at the top and skeleton below
-        const formattedCode = `# ${description.split('\n').join('\n# ')}\n\n${skeleton_code || ''}`;
+        // Store description in separate state
+        setQuestionDescription(description || "");
+        
+        // Create formatted code with only the skeleton code
+        const formattedCode = `${skeleton_code || ''}`;
         
         // Set the code in the editor
         setUserCode(formattedCode);
@@ -116,7 +129,7 @@ export default function Playground({
         console.log("Test results received:", decoded.data);
       }
     },
-    [transcripts, setUserCode, userCode]
+    [transcripts, setUserCode, setQuestionDescription]
   );
 
   useDataChannel(onDataReceived);
@@ -172,60 +185,56 @@ export default function Playground({
     );
   }, [config.settings.theme_color]);
 
-  const audioTileContent = useMemo(() => {
-    const disconnectedContent = (
-      <div className="flex flex-col items-center justify-center gap-2 text-gray-700 text-center w-full">
-        No audio track. Connect to get started.
-      </div>
-    );
-
-    const waitingContent = (
-      <div className="flex flex-col items-center gap-2 text-gray-700 text-center w-full">
-        <LoadingSVG />
-        Waiting for audio track
-      </div>
-    );
-
-    const visualizerContent = (
-      <div
-        className={`flex items-center justify-center w-full h-48 [--lk-va-bar-width:30px] [--lk-va-bar-gap:20px] [--lk-fg:var(--lk-theme-color)]`}
-      >
-        <BarVisualizer
-          state={voiceAssistant.state}
-          trackRef={voiceAssistant.audioTrack}
-          barCount={5}
-          options={{ minHeight: 20 }}
-        />
-      </div>
-    );
-
-    if (roomState === ConnectionState.Disconnected) {
-      return disconnectedContent;
-    }
-
-    if (!voiceAssistant.audioTrack) {
-      return waitingContent;
-    }
-
-    return visualizerContent;
-  }, [
-    voiceAssistant.audioTrack,
-    config.settings.theme_color,
-    roomState,
-    voiceAssistant.state,
-  ]);
-
   const chatTileContent = useMemo(() => {
     if (voiceAssistant.audioTrack) {
       return (
-        <TranscriptionTile
-          agentAudioTrack={voiceAssistant.audioTrack}
-          accentColor={config.settings.theme_color}
-        />
+        <>
+          <div
+            className={`flex items-center justify-center w-full [--lk-va-bar-width:30px] [--lk-va-bar-gap:20px] [--lk-fg:var(--lk-theme-color)]`}
+          >
+            <BarVisualizer
+              state={voiceAssistant.state}
+              trackRef={voiceAssistant.audioTrack}
+              barCount={5}
+              options={{ minHeight: 20 }}
+            />
+          </div>
+          <TranscriptionTile
+            agentAudioTrack={voiceAssistant.audioTrack}
+            accentColor={config.settings.theme_color}
+          />
+        </>
       );
     }
     return <></>;
-  }, [config.settings.theme_color, voiceAssistant.audioTrack]);
+  }, [config.settings.theme_color, voiceAssistant.audioTrack, voiceAssistant.state]);
+
+  const questionDescriptionContent = useMemo(() => {
+    const disconnectedContent = (
+      <div className="flex flex-col items-center justify-center gap-2 text-gray-700 text-center w-full">
+        Connect to see the question description.
+      </div>
+    );
+
+    // Show question description or instructions
+    return (
+      <div className="flex flex-col p-4 gap-2 overflow-y-auto h-full w-full max-h-[200px]">
+        {roomState === ConnectionState.Disconnected ? 
+          disconnectedContent : 
+          (questionDescription ? 
+            <div className="prose prose-sm max-w-none">
+              {questionDescription.split('\n').map((line, i) => (
+                <p key={i} className="text-gray-300">{line}</p>
+              ))}
+            </div> : 
+            <div className="flex items-center justify-center text-gray-700">
+              Waiting for question...
+            </div>
+          )
+        }
+      </div>
+    );
+  }, [roomState, questionDescription]);
 
   const settingsTileContent = useMemo(() => {
     return (
@@ -372,7 +381,7 @@ export default function Playground({
           className="w-full h-full grow"
           childrenClassName="justify-center"
         >
-          {audioTileContent}
+          {chatTileContent}
         </PlaygroundTile>
       ),
     });
@@ -420,6 +429,51 @@ export default function Playground({
     [localParticipant, roomState]
   );
 
+  // Handle resize mouse events
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    startYRef.current = e.clientY;
+    startHeightRef.current = descriptionHeight;
+    
+    console.log("Resize started", { 
+      startY: startYRef.current, 
+      startHeight: startHeightRef.current 
+    });
+    
+    // Add event listeners for mouse move and up
+    document.addEventListener('mousemove', handleResizeMouseMove);
+    document.addEventListener('mouseup', handleResizeMouseUp);
+  }, [descriptionHeight]);
+
+  const handleResizeMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingRef.current) return;
+    
+    const diff = e.clientY - startYRef.current;
+    const newHeight = Math.max(100, Math.min(500, startHeightRef.current + diff));
+    console.log("Resizing", { 
+      currentY: e.clientY, 
+      diff, 
+      newHeight 
+    });
+    setDescriptionHeight(newHeight);
+  }, []);
+
+  const handleResizeMouseUp = useCallback(() => {
+    resizingRef.current = false;
+    console.log("Resize ended");
+    document.removeEventListener('mousemove', handleResizeMouseMove);
+    document.removeEventListener('mouseup', handleResizeMouseUp);
+  }, [handleResizeMouseMove]);
+
+  // Clean up event listeners
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMouseMove);
+      document.removeEventListener('mouseup', handleResizeMouseUp);
+    };
+  }, [handleResizeMouseMove, handleResizeMouseUp]);
+
   return (
     <>
       <PlaygroundHeader
@@ -431,8 +485,8 @@ export default function Playground({
           onConnect(roomState === ConnectionState.Disconnected)
         }
       />
-      <div className="flex gap-4 py-4 grow w-full min-h-0 overflow-hidden">
-        <div className="flex flex-col basis-1/2 gap-4 min-h-0 overflow-hidden">
+      <div className="flex gap-4 py-4 grow w-full h-[calc(100vh-56px)] min-h-0 overflow-hidden">
+        <div className="flex flex-col basis-1/2 gap-4 h-full min-h-0 overflow-hidden">
           <PlaygroundTile
             title="Problem"
             className="w-full h-full min-h-0 overflow-hidden"
@@ -447,20 +501,30 @@ export default function Playground({
           </PlaygroundTile>
         </div>
 
-        <div className="flex flex-col basis-[30%] gap-4 min-h-0 overflow-hidden">
+        <div className="flex flex-col basis-[30%] gap-0 h-full min-h-0 overflow-hidden">
           <PlaygroundTile
-            title="Audio"
-            className="w-full min-h-[200px]"
-            childrenClassName="justify-center"
+            title="Question Description"
+            className="w-full overflow-hidden"
+            style={{ height: `${descriptionHeight}px` }}
+            childrenClassName="justify-start"
           >
-            {audioTileContent}
+            {questionDescriptionContent}
           </PlaygroundTile>
+          
+          {/* Resize handle - made more visible for debugging */}
+          <div 
+            className="w-full h-6 hover:bg-gray-600 cursor-ns-resize flex items-center justify-center relative z-10"
+            onMouseDown={handleResizeMouseDown}
+            onClick={() => console.log("Resize handle clicked")}
+          >
+            <div className="w-16 h-2 bg-gray-500 rounded-full"></div>
+          </div>
 
           {config.settings.chat && (
             <PlaygroundTile
               title="Interview Chat"
               className="w-full flex-1 min-h-0 overflow-hidden"
-              childrenClassName="h-full flex flex-col"
+              childrenClassName="h-full flex flex-col gap-2"
             >
               {chatTileContent}
             </PlaygroundTile>
@@ -470,7 +534,7 @@ export default function Playground({
         <PlaygroundTile
           padding={false}
           backgroundColor="gray-950"
-          className="basis-1/5 min-h-0 overflow-hidden"
+          className="basis-1/5 h-full min-h-0 overflow-hidden"
           childrenClassName="h-full grow items-start overflow-y-auto"
         >
           {settingsTileContent}
