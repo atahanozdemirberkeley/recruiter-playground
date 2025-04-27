@@ -1,3 +1,9 @@
+# To install requirements: 
+``` bash 
+pip install -r requirements.txt
+python3 app/main.py download-files
+```
+
 # To run the playground:
 
 ```bash
