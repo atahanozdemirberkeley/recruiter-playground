@@ -19,6 +19,7 @@ class DataUtils:
         self.interview_controller = interview_controller
         self.log_queue = asyncio.Queue()
         self.log_file_path = log_file_path
+        self.last_code_snapshot = ""  # Track the last code snapshot
 
     async def process_data_packet(self, packet: DataPacket) -> None:
         """Process incoming data packets from the room."""
@@ -69,25 +70,33 @@ class DataUtils:
         """Handle user speech events."""        
         # Take code snapshot
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
-        # Update to access code_snapshots directly on interview_controller
-        snapshot_id = str(len(self.interview_controller.code_snapshots))
-        self.interview_controller.code_snapshots[snapshot_id] = code_snapshot
-
+        
+        # Only include code if it's changed
+        code_section = ""
+        has_code_changed = code_snapshot != self.last_code_snapshot
+        
+        # Only save to code_snapshots if different from last snapshot
+        if has_code_changed:
+            snapshot_id = str(len(self.interview_controller.code_snapshots))
+            self.interview_controller.code_snapshots[snapshot_id] = code_snapshot
+            self.last_code_snapshot = code_snapshot  # Update last snapshot
+            code_section = f"CODE:\n{code_snapshot}\n\n"
+        
         # Log interaction with interview duration
         duration = self.interview_controller.get_interview_time_since_start()
+        
         await self.log_queue.put(
             f"[{duration}] USER:\n{msg.content}\n\n"
-            f"CODE:\n{code_snapshot}\n\n"
+            f"{code_section}"
             f"{'='*80}\n\n"
         )
 
     async def handle_agent_speech(self, msg: llm.ChatMessage) -> None:
         """Handle agent speech events."""
-        code_snapshot = self.interview_controller.file_watcher._take_snapshot()
         duration = self.interview_controller.get_interview_time_since_start()
+        
         await self.log_queue.put(
             f"[{duration}] AGENT:\n{msg.content}\n\n"
-            f"CODE:\n{code_snapshot}\n\n"
             f"{'='*80}\n\n"
         )
 
