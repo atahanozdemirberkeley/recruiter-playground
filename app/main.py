@@ -48,11 +48,7 @@ async def entrypoint(ctx: JobContext):
     interview_controller.current_agent = intro_agent
 
     session = AgentSession(
-        vad=silero.VAD.load(
-            activation_threshold=0.6,
-            min_silence_duration=2.0,
-            min_speech_duration=0.2
-        ),
+        vad=silero.VAD.load(),
         stt=openai.STT(),
         llm=openai.LLM(model="gpt-4o"),
         tts=openai.TTS(),
@@ -85,6 +81,11 @@ async def entrypoint(ctx: JobContext):
 
     # Keep the agent running
     while True:
+
+        if interview_controller.is_interview_complete:
+            await ctx.shutdown(reason="Session ended")
+            break 
+
         await asyncio.sleep(1)
 
 if __name__ == "__main__":

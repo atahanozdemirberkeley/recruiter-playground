@@ -76,6 +76,8 @@ class CodingAgent(Agent):
             # Get context info from interview controller
             interview_time = self.interview_controller.get_interview_time_since_start(
                 formatted=True)
+            time_since_last_interaction = time.time(
+            ) - self.interview_controller.last_activity_time
             time_left = self.interview_controller.get_interview_time_left(
                 formatted=True)
             heartbeat_interval = self.interview_controller.heartbeat_interval
@@ -87,7 +89,8 @@ class CodingAgent(Agent):
                 heartbeat_interval=heartbeat_interval,
                 interview_time=interview_time,
                 time_left=time_left,
-                current_code=code_snapshot
+                current_code=code_snapshot,
+                time_since_last_interaction=time_since_last_interaction
             )
         except Exception as e:
             logger.error(

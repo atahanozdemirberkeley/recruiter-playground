@@ -29,6 +29,7 @@ class InterviewController:
         self.start_time = None
         self.stage_timestamps = {}
         self.end_time = None
+        self.is_interview_complete = False
 
         # Other controller properties
         # self.llm = LLM(
@@ -211,23 +212,25 @@ class InterviewController:
     async def finish_interview(self) -> None:
         """Finalize the interview and prepare for evaluation"""
         self.end_time = datetime.now()
-        
+
         # Log interview completion
         duration = self.get_interview_time_since_start(formatted=True)
         logger.info(f"Interview completed. Total duration: {duration}")
-        
+
         # Take final code snapshot
         final_code = self.file_watcher._take_snapshot()
         self.add_code_snapshot(final_code)
-        
+
+        await self.current_agent.session.shutdown(reason="Session ended")
         # Generate evaluation directly from DataUtils
         try:
             data_utils = get_data_utils()
             self.evaluation_text = await data_utils.generate_candidate_evaluation()
-            logger.info(f"Candidate evaluation complete. Saved to eval_results directory.")
+            logger.info(
+                f"Candidate evaluation complete. Saved to eval_results directory.")
         except Exception as e:
             logger.error(f"Error evaluating candidate: {e}")
-        
+
         # Notify frontend that interview is complete
         try:
             payload = json.dumps({
@@ -238,11 +241,12 @@ class InterviewController:
                     "questionTitle": self.question.title if self.question else None
                 }
             }).encode('utf-8')
-            
+
             await self.room.local_participant.publish_data(
                 payload,
                 topic="interview-status"
             )
+
         except Exception as e:
             logger.error(f"Error publishing interview completion: {e}")
 
