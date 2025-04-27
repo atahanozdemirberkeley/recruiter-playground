@@ -5,7 +5,7 @@ import { useConfig } from "src/hooks/useConfig";
 
 const titleHeight = 32;
 
-type PlaygroundTileProps = {
+export interface PlaygroundTileProps {
   title?: string;
   children?: ReactNode;
   className?: string;
@@ -13,7 +13,8 @@ type PlaygroundTileProps = {
   padding?: boolean;
   backgroundColor?: string;
   actions?: ReactNode;
-};
+  style?: React.CSSProperties;
+}
 
 export type PlaygroundTab = {
   title: string;
@@ -33,6 +34,7 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
   padding = true,
   backgroundColor = "transparent",
   actions,
+  style,
 }) => {
   const contentPadding = padding ? 4 : 0;
   const { localParticipant } = useLocalParticipant();
@@ -61,6 +63,7 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
           ? "bg-[#1a1a1a] rounded-lg overflow-hidden shadow-lg" // LeetCode-style container
           : `border rounded-sm border-gray-800 text-gray-500 bg-${backgroundColor}`
       }`}
+      style={style}
     >
       {title && (
         <div
@@ -91,7 +94,7 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
         </div>
       )}
       <div
-        className={`flex flex-col grow w-full ${childrenClassName}`}
+        className={`flex flex-col h-full w-full overflow-hidden ${childrenClassName}`}
         style={{
           padding: title === "Problem" ? "0" : `${contentPadding * 4}px`,
         }}
