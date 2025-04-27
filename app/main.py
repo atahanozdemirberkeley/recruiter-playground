@@ -48,7 +48,9 @@ async def entrypoint(ctx: JobContext):
     interview_controller.current_agent = intro_agent
 
     session = AgentSession(
-        vad=silero.VAD.load(),
+        vad=silero.VAD.load(
+            max_buffered_speech=500
+        ),
         stt=openai.STT(),
         llm=openai.LLM(model="gpt-4o"),
         tts=openai.TTS(),
