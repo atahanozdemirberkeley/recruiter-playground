@@ -47,11 +47,9 @@ async def entrypoint(ctx: JobContext):
     intro_agent = IntroAgent()
     interview_controller.current_agent = intro_agent
 
-    
-
     session = AgentSession(
         vad=silero.VAD.load(
-            activation_threshold=0.6, 
+            activation_threshold=0.6,
             min_silence_duration=2.0,
             min_speech_duration=0.2
         ),
@@ -59,7 +57,7 @@ async def entrypoint(ctx: JobContext):
         llm=openai.LLM(model="gpt-4o"),
         tts=openai.TTS(),
         allow_interruptions=False,
-        min_silence_duration=2,
+        min_endpointing_delay=2,
         turn_detection=EnglishModel(),
     )
 
