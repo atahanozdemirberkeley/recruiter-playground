@@ -4,22 +4,28 @@ import logging
 from utils.template_utils import load_template, save_prompt
 from rich.console import Console
 from utils.question_models import Question, TestCase
+import os
 
 logger = logging.getLogger("question_manager")
 logger.setLevel(logging.INFO)
 console = Console()
 
+# Define the absolute path based on the root of your project
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+QUESTION_PATH = os.path.join(ROOT_DIR, 'testing', 'test_files')
+
+
 class QuestionManager:
     """Manages a collection of coding interview questions."""
 
-    def __init__(self, questions_root: Path):
+    def __init__(self):
         """
         Initialize QuestionManager with the root directory containing all questions.
 
         Args:
             questions_root (Path): Path to the root directory containing question subdirectories
         """
-        self.questions_root = Path(questions_root)
+        self.questions_root = Path(QUESTION_PATH)
         self.questions: Dict[str, Question] = {}
         self._load_questions()
 

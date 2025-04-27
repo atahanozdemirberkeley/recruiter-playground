@@ -1,0 +1,23 @@
+{
+  "scores": {
+    "algorithms": {
+      "score": 2,
+      "justification": "The candidate needed significant hints to come up with the correct data structures to use. They had some understanding of the use of a stack but struggled to conceptualize how it can be used to solve the problem."
+    },
+    "coding": {
+      "score": 2,
+      "justification": "The candidate's iterative process while coding showed a lack of clarity in translating their thoughts into code. They also asked several questions to confirm if their syntax was correct, hence the score."
+    },
+    "communication": {
+      "score": 3,
+      "justification": "The candidate communicated adequately. However, the interviewer needed to ask follow-up questions to understand the thought process and approach of the candidate."
+    },
+    "problem_solving": {
+      "score": 3,
+      "justification": "The candidate took some time to arrive at the solution, went back and forth in the interview, but finally solved the problem. However, they didn't seem able to foresee potential issues or corner cases in their solution."
+    }
+  },
+  "total_score": 10,
+  "decision": "Leaning No Hire",
+  "summary": "The candidate displayed some grasp of coding and problem-solving skills, but they struggled to apply their knowledge of algorithms and data structures. After significant hints, they were able to solve the problem, but they demonstrated difficulty translating their thoughts into coding. Considering these points into account, they are leaning towards not hiring. However, with more experience and improvement in algorithm data structure knowledge, they can be a potential hire."
+}

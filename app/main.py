@@ -12,14 +12,13 @@ import os
 import logging
 from livekit.rtc import DataPacket
 from utils.data_utils import DataUtils
-from utils.shared_state import set_state
+from utils.shared_state import set_state, set_session
 
 console = Console()
 logger = logging.getLogger(__name__)
 load_dotenv()
 
 QUESTION_NUMBER = 2
-PATH = "testing/test_files"
 
 
 async def entrypoint(ctx: JobContext):
@@ -32,12 +31,11 @@ async def entrypoint(ctx: JobContext):
     logger.info("[DEBUG] Connected to room")
 
     # Initialize components
-    question_manager = QuestionManager(Path(PATH))
+    question_manager = QuestionManager()
     interview_controller = InterviewController(question_manager)
     interview_controller.room = ctx.room
     data_utils = DataUtils(interview_controller)
     set_state(data_utils, interview_controller)
-
     # Initialize the interview state
     question = question_manager.select_question(QUESTION_NUMBER)
     interview_controller.initialize_interview(question)
@@ -58,6 +56,7 @@ async def entrypoint(ctx: JobContext):
         min_endpointing_delay=2,
         turn_detection=EnglishModel(),
     )
+    set_session(session)
 
     # Start the session - the Agent class will handle speech events internally
     await session.start(room=ctx.room, agent=intro_agent, room_input_options=RoomInputOptions(
@@ -86,7 +85,7 @@ async def entrypoint(ctx: JobContext):
 
         if interview_controller.is_interview_complete:
             await ctx.shutdown(reason="Session ended")
-            break 
+            break
 
         await asyncio.sleep(1)
 

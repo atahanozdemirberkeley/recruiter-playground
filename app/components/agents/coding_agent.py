@@ -1,12 +1,13 @@
 from livekit.agents import Agent, function_tool, ChatContext, ChatMessage, StopResponse
 from utils.template_utils import load_template
 from components.tools import get_file_snapshot, get_interview_time_left, finish_interview
-from utils.shared_state import get_interview_controller, get_data_utils
+from utils.shared_state import get_interview_controller, get_data_utils, get_session
 import logging
 import time
 import asyncio
 
 logger = logging.getLogger(__name__)
+session = None
 
 
 class CodingAgent(Agent):
@@ -30,6 +31,8 @@ class CodingAgent(Agent):
 
         self.question = None
         self.last_code_snapshot = None
+        global session
+        session = get_session()
 
     async def on_enter(self):
         """Called when the agent enters the conversation"""
@@ -55,7 +58,7 @@ class CodingAgent(Agent):
         """Called when agent starts speaking"""
         # Pause heartbeat timer when agent starts speaking
         self.interview_controller.pause_heartbeat_timer()
-
+    
     async def on_user_turn_started(self, turn_ctx: ChatContext) -> None:
         """Called when user starts speaking"""
         # Pause heartbeat timer when user starts speaking
