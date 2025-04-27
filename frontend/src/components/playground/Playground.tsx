@@ -185,20 +185,46 @@ export default function Playground({
     );
   }, [config.settings.theme_color]);
 
+  const agentAudioVisualizer = useMemo(() => {
+    if (!voiceAssistant.audioTrack) {
+      if (roomState === ConnectionState.Disconnected) {
+        return (
+          <div className="flex flex-col items-center justify-center gap-2 text-gray-700 text-center w-full h-[100px]">
+            No audio track. Connect to get started.
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex flex-col items-center gap-2 text-gray-700 text-center w-full h-[100px]">
+            <LoadingSVG />
+            Waiting for audio track
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div
+        className={`flex items-center justify-center w-full h-[100px] [--lk-va-bar-width:30px] [--lk-va-bar-gap:20px] [--lk-fg:var(--lk-theme-color)]`}
+      >
+        <BarVisualizer
+          state={voiceAssistant.state}
+          trackRef={voiceAssistant.audioTrack}
+          barCount={5}
+          options={{ minHeight: 20 }}
+        />
+      </div>
+    );
+  }, [
+    voiceAssistant.audioTrack,
+    voiceAssistant.state,
+    roomState
+  ]);
+
   const chatTileContent = useMemo(() => {
     if (voiceAssistant.audioTrack) {
       return (
         <>
-          <div
-            className={`flex items-center justify-center w-full [--lk-va-bar-width:30px] [--lk-va-bar-gap:20px] [--lk-fg:var(--lk-theme-color)]`}
-          >
-            <BarVisualizer
-              state={voiceAssistant.state}
-              trackRef={voiceAssistant.audioTrack}
-              barCount={5}
-              options={{ minHeight: 20 }}
-            />
-          </div>
           <TranscriptionTile
             agentAudioTrack={voiceAssistant.audioTrack}
             accentColor={config.settings.theme_color}
@@ -211,23 +237,23 @@ export default function Playground({
 
   const questionDescriptionContent = useMemo(() => {
     const disconnectedContent = (
-      <div className="flex flex-col items-center justify-center gap-2 text-gray-700 text-center w-full">
+      <div className="flex flex-col items-center justify-center gap-2 text-gray-700 text-center w-full h-full">
         Connect to see the question description.
       </div>
     );
 
     // Show question description or instructions
     return (
-      <div className="flex flex-col p-4 gap-2 overflow-y-auto h-full w-full max-h-[200px]">
+      <div className="flex flex-col p-4 gap-2 overflow-y-auto w-full h-full">
         {roomState === ConnectionState.Disconnected ? 
           disconnectedContent : 
           (questionDescription ? 
-            <div className="prose prose-sm max-w-none">
+            <div className="prose prose-sm max-w-none h-full overflow-y-auto">
               {questionDescription.split('\n').map((line, i) => (
-                <p key={i} className="text-gray-300">{line}</p>
+                <p key={i} className="text-gray-300 mb-4">{line}</p>
               ))}
             </div> : 
-            <div className="flex items-center justify-center text-gray-700">
+            <div className="flex items-center justify-center text-gray-700 h-full">
               Waiting for question...
             </div>
           )
@@ -239,26 +265,8 @@ export default function Playground({
   const settingsTileContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4 h-full w-full items-start overflow-y-auto">
-        {config.description && (
-          <ConfigurationPanelItem title="Description">
-            {config.description}
-          </ConfigurationPanelItem>
-        )}
-
-        <ConfigurationPanelItem title="Settings">
-          {localParticipant && (
-            <div className="flex flex-col gap-2">
-              <NameValueRow
-                name="Room"
-                value={name}
-                valueColor={`${config.settings.theme_color}-500`}
-              />
-              <NameValueRow
-                name="Participant"
-                value={localParticipant.identity}
-              />
-            </div>
-          )}
+        <ConfigurationPanelItem title="Voice Assistant">
+          {agentAudioVisualizer}
         </ConfigurationPanelItem>
 
         <div className="flex justify-center w-full">
@@ -301,6 +309,7 @@ export default function Playground({
             />
           </div>
         </ConfigurationPanelItem>
+
         {localVideoTrack && (
           <ConfigurationPanelItem
             title="Camera"
@@ -322,6 +331,23 @@ export default function Playground({
             <AudioInputTile trackRef={localMicTrack} />
           </ConfigurationPanelItem>
         )}
+
+        <ConfigurationPanelItem title="Settings">
+          {localParticipant && (
+            <div className="flex flex-col gap-2">
+              <NameValueRow
+                name="Room"
+                value={name}
+                valueColor={`${config.settings.theme_color}-500`}
+              />
+              <NameValueRow
+                name="Participant"
+                value={localParticipant.identity}
+              />
+            </div>
+          )}
+        </ConfigurationPanelItem>
+
         <div className="w-full">
           <ConfigurationPanelItem title="Color">
             <ColorPicker
@@ -345,7 +371,6 @@ export default function Playground({
       </div>
     );
   }, [
-    config.description,
     config.settings,
     config.show_qr,
     localParticipant,
@@ -381,7 +406,7 @@ export default function Playground({
           className="w-full h-full grow"
           childrenClassName="justify-center"
         >
-          {chatTileContent}
+          {agentAudioVisualizer}
         </PlaygroundTile>
       ),
     });

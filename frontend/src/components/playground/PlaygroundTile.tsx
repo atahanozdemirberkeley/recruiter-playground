@@ -94,7 +94,7 @@ export const PlaygroundTile: React.FC<PlaygroundTileProps> = ({
         </div>
       )}
       <div
-        className={`flex flex-col grow w-full ${childrenClassName}`}
+        className={`flex flex-col h-full w-full overflow-hidden ${childrenClassName}`}
         style={{
           padding: title === "Problem" ? "0" : `${contentPadding * 4}px`,
         }}
