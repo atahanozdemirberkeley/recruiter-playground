@@ -43,6 +43,7 @@ export const PlaygroundHeader = ({
           onClick={() => {
             onConnectClicked();
           }}
+          className="text-white"
         >
           {connectionState === ConnectionState.Connecting ? (
             <LoadingSVG />
