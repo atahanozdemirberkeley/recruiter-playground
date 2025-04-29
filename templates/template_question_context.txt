@@ -8,7 +8,9 @@ Category: {category}
 Problem Statement:
 {question}
 
-=== INTERVIEWER RESOURCES (DO NOT SHARE DIRECTLY) ===
+Note: Examples and details are in the Question Description section above (in frontend user sees). Don't read these aloud, just direct users there.
+
+=== INTERVIEWER RESOURCES (DO NOT SHARE) ===
 Available Hints (Only provide when explicitly needed):
 {hints}
 

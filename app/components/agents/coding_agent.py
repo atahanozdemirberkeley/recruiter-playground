@@ -24,7 +24,7 @@ class CodingAgent(Agent):
             self.interview_controller.question.id)
         template = load_template('template_coding_agent')
         self.template = template.format(QUESTION=question_prompt)
-        save_prompt("template_coding_agent", self.template)
+        save_prompt("coding_agent", self.template)
         super().__init__(
             instructions=self.template,
             tools=[get_file_snapshot, get_interview_time_left, finish_interview]
@@ -38,9 +38,9 @@ class CodingAgent(Agent):
     async def on_enter(self):
         """Called when the agent enters the conversation"""
         self.interview_controller.current_agent = self
-
+        question_id = self.interview_controller.question.id
         await self.session.generate_reply(
-            instructions="Start by introducing the coding problem now.",
+            instructions=f"Start by introducing the {question_id} coding problem now.",
         )
 
     def get_heartbeat_context(self) -> str:

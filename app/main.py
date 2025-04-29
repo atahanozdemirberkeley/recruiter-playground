@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, cli, llm, RoomInputOptions, UserStateChangedEvent, AgentStateChangedEvent, ConversationItemAddedEvent
-from livekit.plugins import openai, silero, noise_cancellation
+from livekit.plugins import openai, silero, noise_cancellation, anthropic
 from livekit.plugins.turn_detector.english import EnglishModel
 from components.question_manager import QuestionManager
 from rich.console import Console
@@ -50,7 +50,7 @@ async def entrypoint(ctx: JobContext):
             max_buffered_speech=500
         ),
         stt=openai.STT(),
-        llm=openai.LLM(model="gpt-4o"),
+        llm=anthropic.LLM(model="claude-3-7-sonnet-20250219", max_tokens=64000),
         tts=openai.TTS(),
         allow_interruptions=False,
         min_endpointing_delay=2,
