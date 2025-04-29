@@ -1,0 +1,23 @@
+{
+  "scores": {
+    "algorithms": {
+      "score": 1,
+      "justification": "The candidate could not get started on the problem without significant aid from the interviewer, and even then, couldn't proceed without almost being handed the approach to the problem. This indicates a lack of understanding regarding algorithms and data structures. Specifically they didn't recognize the need or see the benefit of using a stack even after the interviewer tried guiding them there."
+    },
+    "coding": {
+      "score": 1,
+      "justification": "The candidate didn't write any substantial code, even with guidance from the interviewer on how to tackle the problem. It seems they don't feel comfortable writing code without being given a clear solution."
+    },
+    "communication": {
+      "score": 2,
+      "justification": "The candidate's communication was weak and vague, especially as they struggled to put into words the concept they had formed around the problem. They misused phrases like 'match Keep track of the history of some type of input that I'm seeing', which is confusing and a sign that they're unsure about what they’re saying."
+    },
+    "problem_solving": {
+      "score": 1,
+      "justification": "The candidate had trouble getting started on the problem, and did not succeed in doing so during the course of the interview. This probably resulted from a lack of preparation or comfort with technical problem-solving."
+    }
+  },
+  "total_score": 5,
+  "decision": "No Hire",
+  "summary": "The candidate struggled with generating an algorithm to solve the problem, even with guidance from the interviewer. They also failed to produce substantial code. Their communication and problem-solving skills showed room for improvement. It seems like the candidate needs more practice before they are ready for a technical interview."
+}
