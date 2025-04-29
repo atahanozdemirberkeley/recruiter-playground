@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class DataUtils:
-    def __init__(self, interview_controller: InterviewController, log_file_path="transcriptions.log"):
+    def __init__(self, interview_controller: InterviewController):
         self.interview_controller = interview_controller
         self.log_queue = asyncio.Queue()
-        self.log_file_path = log_file_path
         self.last_code_snapshot = ""  # Track the last code snapshot
+        self.current_transcription_file = None  # Track current transcription file
 
     async def process_data_packet(self, packet: DataPacket) -> None:
         """Process incoming data packets from the room."""
@@ -66,7 +66,7 @@ class DataUtils:
         except Exception as e:
             logger.error(f"Error sending results to frontend: {e}")
 
-    async def handle_user_speech(self, msg: llm.ChatMessage) -> None:
+    async def handle_user_speech(self, msg: str) -> None:
         """Handle user speech events."""        
         # Take code snapshot
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
@@ -86,23 +86,32 @@ class DataUtils:
         duration = self.interview_controller.get_interview_time_since_start()
         
         await self.log_queue.put(
-            f"[{duration}] USER:\n{msg.content}\n\n"
+            f"[{duration}] USER:\n{msg}\n\n"
             f"{code_section}"
             f"{'='*80}\n\n"
         )
 
-    async def handle_agent_speech(self, msg: llm.ChatMessage) -> None:
+    async def handle_agent_speech(self, msg: str) -> None:
         """Handle agent speech events."""
         duration = self.interview_controller.get_interview_time_since_start()
-        
         await self.log_queue.put(
-            f"[{duration}] AGENT:\n{msg.content}\n\n"
+            f"[{duration}] AGENT:\n{msg}\n\n"
             f"{'='*80}\n\n"
         )
 
     async def write_transcription(self) -> None:
-        """Write transcriptions to a log file."""
-        async with async_open(self.log_file_path, "w") as f:
+        """Write transcriptions to a timestamped log file in the transcriptions directory."""
+        # Create transcriptions directory if it doesn't exist
+        transcriptions_dir = Path("transcriptions")
+        if not transcriptions_dir.exists():
+            transcriptions_dir.mkdir(parents=True)
+            logger.info(f"Created directory: {transcriptions_dir}")
+
+        # Generate timestamped filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.current_transcription_file = transcriptions_dir / f"{timestamp}_transcription.log"
+        
+        async with async_open(self.current_transcription_file, "w") as f:
             while True:
                 try:
                     msg = await self.log_queue.get()
@@ -224,8 +233,12 @@ class DataUtils:
                 logger.info(f"Waiting for {self.log_queue.qsize()} pending transcription entries to be written")
                 await asyncio.sleep(1)  # Brief delay to allow queue processing
                 
+            if not self.current_transcription_file:
+                logger.error("No transcription file available for evaluation")
+                return "ERROR: No transcription file available for evaluation"
+                
             # Initialize evaluation agent with specified model
-            evaluator = EvaluationAgent(transcription_path=self.log_file_path, model=model)
+            evaluator = EvaluationAgent(transcription_path=str(self.current_transcription_file), model=model)
             
             # Generate evaluation (raw text)
             evaluation_text = await evaluator.evaluate_candidate(chat_ctx)
@@ -305,12 +318,12 @@ async def evaluate_from_file(file_path: str, model: str = "gpt-4", output_dir: s
         # Generate timestamped filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
-        # Extract candidate name from file path
+        # Extract transcription timestamp from file path
         log_filename = os.path.basename(file_path)
-        candidate_name = log_filename.split('.')[0] if '.' in log_filename else "candidate"
+        transcription_timestamp = log_filename.split('_')[0] if '_' in log_filename else "unknown"
         
-        # Create filename with timestamp and candidate name
-        result_filename = f"{timestamp}_{candidate_name}_evaluation.txt"
+        # Create filename with both timestamps
+        result_filename = f"{timestamp}_{transcription_timestamp}_evaluation.txt"
         result_path = output_path / result_filename
         
         # Save raw evaluation text

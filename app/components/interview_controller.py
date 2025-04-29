@@ -254,13 +254,13 @@ class InterviewController:
         """Update the last activity timestamp to the current time"""
         self.last_activity_time = time.time()
 
-    def pause_heartbeat_timer(self):
+    async def pause_heartbeat_timer(self):
         """Pause the heartbeat timer by setting speech active flag"""
         self.is_speech_active = True
         logger.info("Heartbeat timer paused - speech active")
 
-    def resume_heartbeat_timer(self):
-        """Resume the heartbeat timer and update the activity timestamp"""
+    async def resume_heartbeat_timer(self):
+        """Resume the heartbeat timer by clearing speech active flag"""
         self.is_speech_active = False
         self.update_activity_timestamp()
         logger.info("Heartbeat timer resumed - speech ended")

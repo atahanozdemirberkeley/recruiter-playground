@@ -37,28 +37,6 @@ class IntroAgent(Agent):
             Also, please feel free to ask any questions about the process."""
         )
 
-    async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:
-        """Called when user finishes speaking"""
-        asyncio.create_task(self.data_utils.handle_user_speech(new_message))
-        # Resume heartbeat timer when user finishes speaking
-        self.interview_controller.resume_heartbeat_timer()
-
-    async def on_agent_turn_completed(self, response: ChatMessage) -> None:
-        """Called after agent generates response"""
-        asyncio.create_task(self.data_utils.handle_agent_speech(response))
-        # Resume heartbeat timer when agent finishes speaking
-        self.interview_controller.resume_heartbeat_timer()
-
-    async def on_agent_turn_started(self, turn_ctx: ChatContext) -> None:
-        """Called when agent starts speaking"""
-        # Pause heartbeat timer when agent starts speaking
-        self.interview_controller.pause_heartbeat_timer()
-
-    async def on_user_turn_started(self, turn_ctx: ChatContext) -> None:
-        """Called when user starts speaking"""
-        # Pause heartbeat timer when user starts speaking
-        self.interview_controller.pause_heartbeat_timer()
-
     def get_heartbeat_context(self) -> str:
         """
         Get the heartbeat context template for the intro agent.

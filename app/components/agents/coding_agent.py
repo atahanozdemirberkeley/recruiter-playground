@@ -1,5 +1,5 @@
 from livekit.agents import Agent, function_tool, ChatContext, ChatMessage, StopResponse
-from utils.template_utils import load_template
+from utils.template_utils import load_template, save_prompt
 from components.tools import get_file_snapshot, get_interview_time_left, finish_interview
 from utils.shared_state import get_interview_controller, get_data_utils, get_session
 import logging
@@ -24,6 +24,7 @@ class CodingAgent(Agent):
             self.interview_controller.question.id)
         template = load_template('template_coding_agent')
         self.template = template.format(QUESTION=question_prompt)
+        save_prompt("template_coding_agent", self.template)
         super().__init__(
             instructions=self.template,
             tools=[get_file_snapshot, get_interview_time_left, finish_interview]
@@ -41,28 +42,6 @@ class CodingAgent(Agent):
         await self.session.generate_reply(
             instructions="Start by introducing the coding problem now.",
         )
-
-    async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:
-        """Called when user finishes speaking"""
-        asyncio.create_task(self.data_utils.handle_user_speech(new_message))
-        # Resume heartbeat timer when user finishes speaking
-        self.interview_controller.resume_heartbeat_timer()
-
-    async def on_agent_turn_completed(self, response: ChatMessage) -> None:
-        """Called after agent generates response"""
-        asyncio.create_task(self.data_utils.handle_agent_speech(response))
-        # Resume heartbeat timer when agent finishes speaking
-        self.interview_controller.resume_heartbeat_timer()
-
-    async def on_agent_turn_started(self, turn_ctx: ChatContext) -> None:
-        """Called when agent starts speaking"""
-        # Pause heartbeat timer when agent starts speaking
-        self.interview_controller.pause_heartbeat_timer()
-    
-    async def on_user_turn_started(self, turn_ctx: ChatContext) -> None:
-        """Called when user starts speaking"""
-        # Pause heartbeat timer when user starts speaking
-        self.interview_controller.pause_heartbeat_timer()
 
     def get_heartbeat_context(self) -> str:
         """

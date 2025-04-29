@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
-from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, cli, llm, RoomInputOptions
+from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, AgentSession, cli, llm, RoomInputOptions, UserStateChangedEvent, AgentStateChangedEvent, ConversationItemAddedEvent
 from livekit.plugins import openai, silero, noise_cancellation
 from livekit.plugins.turn_detector.english import EnglishModel
 from components.question_manager import QuestionManager
@@ -12,7 +12,7 @@ import os
 import logging
 from livekit.rtc import DataPacket
 from utils.data_utils import DataUtils
-from utils.shared_state import set_state, set_session
+from utils.shared_state import set_state, set_session, get_interview_controller
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -70,6 +70,27 @@ async def entrypoint(ctx: JobContext):
     ########### START EVENT LISTENERS ###########
 
     # Attach an event listener for data packets from frontend
+
+    @session.on("conversation_item_added")
+    def on_conversation_item_added(ev: ConversationItemAddedEvent):
+        if ev.item.role == "user":
+            asyncio.create_task(data_utils.handle_user_speech(ev.item.text_content))
+        elif ev.item.role == "assistant":
+            asyncio.create_task(data_utils.handle_agent_speech(ev.item.text_content))
+
+    @session.on("user_state_changed")
+    def on_user_state_changed(ev: UserStateChangedEvent):
+        interview_controller = get_interview_controller()
+        if ev.old_state == "listening" and ev.new_state == "speaking":
+            # on_user_turn_started
+            asyncio.create_task(interview_controller.pause_heartbeat_timer())
+
+    @session.on("agent_state_changed")
+    def on_agent_state_changed(ev: AgentStateChangedEvent):
+        interview_controller = get_interview_controller()
+        if ev.old_state == "speaking" and ev.new_state == "listening":
+            # on_agent_turn_completed
+            asyncio.create_task(interview_controller.resume_heartbeat_timer())
 
     @ctx.room.on("data_received")
     def handle_data_received(packet: DataPacket):
