@@ -36,6 +36,7 @@ async def entrypoint(ctx: JobContext):
     interview_controller.room = ctx.room
     data_utils = DataUtils(interview_controller)
     set_state(data_utils, interview_controller)
+
     # Initialize the interview state
     question = question_manager.select_question(QUESTION_NUMBER)
     interview_controller.initialize_interview(question)
@@ -62,6 +63,8 @@ async def entrypoint(ctx: JobContext):
     await session.start(room=ctx.room, agent=intro_agent, room_input_options=RoomInputOptions(
         noise_cancellation=noise_cancellation.BVC(),
     ),)
+
+    await data_utils.send_question_to_frontend()
 
     # Start the file watcher
     interview_controller.file_watcher.start_watching()

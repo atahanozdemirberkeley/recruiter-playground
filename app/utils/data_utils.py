@@ -33,10 +33,16 @@ class DataUtils:
                 self.interview_controller.file_watcher.write_content(code_text)
 
             elif packet_type == "run_code":
+
                 test_file_path = self.interview_controller.file_watcher.path_to_watch
                 results = await self.interview_controller.run_code(
                     mode="run"
                 )
+                #
+                from rich import print as rich_print
+                rich_print("[bold green]results[/bold green]", results)
+                #
+
                 await self.send_results_to_frontend(results)
 
             elif packet_type == "submit_code":
@@ -70,21 +76,21 @@ class DataUtils:
         """Handle user speech events."""        
         # Take code snapshot
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
-        
+
         # Only include code if it's changed
         code_section = ""
         has_code_changed = code_snapshot != self.last_code_snapshot
-        
+
         # Only save to code_snapshots if different from last snapshot
         if has_code_changed:
             snapshot_id = str(len(self.interview_controller.code_snapshots))
             self.interview_controller.code_snapshots[snapshot_id] = code_snapshot
             self.last_code_snapshot = code_snapshot  # Update last snapshot
             code_section = f"CODE:\n{code_snapshot}\n\n"
-        
+
         # Log interaction with interview duration
         duration = self.interview_controller.get_interview_time_since_start()
-        
+
         await self.log_queue.put(
             f"[{duration}] USER:\n{msg}\n\n"
             f"{code_section}"
@@ -124,7 +130,7 @@ class DataUtils:
 
     async def finish_queue(self, shutdown_reason=None) -> None:
         """Clean up the log queue and wait for write task completion.
-        
+
         Args:
             shutdown_reason: The reason for shutdown (passed by LiveKit callback)
         """
@@ -140,7 +146,7 @@ class DataUtils:
             if not question:
                 logger.error("No question available to send to frontend")
                 return
-                
+
             payload = json.dumps({
                 "type": "question_data",
                 "data": {
@@ -154,11 +160,12 @@ class DataUtils:
                 topic="question-data"
             )
             logger.info("Question data sent to frontend")
-            
+
             # Update the file watcher with skeleton code if available
             if hasattr(question, 'skeleton_code') and question.skeleton_code:
-                self.interview_controller.file_watcher.write_content(question.skeleton_code)
-                
+                self.interview_controller.file_watcher.write_content(
+                    question.skeleton_code)
+
         except Exception as e:
             logger.error(f"Error sending question to frontend: {e}")
 
@@ -176,20 +183,20 @@ class DataUtils:
                     "skeleton_code": ""
                 }
             }).encode('utf-8')
-            
+
             await self.interview_controller.room.local_participant.publish_data(
                 code_payload,
                 topic="question-data"
             )
-            
+
             # Also clear the file watcher
             self.interview_controller.file_watcher.write_content("")
-            
+
             # Reset interview timer
             if self.interview_controller.question:
                 duration_minutes = self.interview_controller.question.duration
                 await self.interview_controller.start_interview_timer(duration_minutes)
-                
+
                 # Notify frontend about reset
                 payload = json.dumps({
                     "type": "interview_reset",
@@ -200,37 +207,38 @@ class DataUtils:
                         "timestamp": datetime.now().isoformat()
                     }
                 }).encode('utf-8')
-                
+
                 await self.interview_controller.room.local_participant.publish_data(
                     payload,
                     topic="interview-status"
                 )
-                
+
                 # Clear transcription logs if needed
                 self.log_queue = asyncio.Queue()
-                
+
                 logger.info("Code editor and interview state reset")
             else:
                 logger.error("Cannot reset code editor: No question available")
-                
+
         except Exception as e:
             logger.error(f"Error resetting code editor: {e}")
-    
+
     async def generate_candidate_evaluation(self, chat_ctx: Optional[list] = None, model: str = "gpt-4") -> str:
         """
         Generate a comprehensive evaluation of the candidate based on the interview.
-        
+
         Args:
             chat_ctx: Optional chat context to use instead of the transcription log
             model: LLM model to use for evaluation (default: gpt-4)
-            
+
         Returns:
             Raw evaluation text from the LLM
         """
         try:
             # Ensure all pending transcription entries are written
             if self.log_queue.qsize() > 0:
-                logger.info(f"Waiting for {self.log_queue.qsize()} pending transcription entries to be written")
+                logger.info(
+                    f"Waiting for {self.log_queue.qsize()} pending transcription entries to be written")
                 await asyncio.sleep(1)  # Brief delay to allow queue processing
                 
             if not self.current_transcription_file:
@@ -242,19 +250,19 @@ class DataUtils:
             
             # Generate evaluation (raw text)
             evaluation_text = await evaluator.evaluate_candidate(chat_ctx)
-            
+
             # Save evaluation to a timestamped file
             await self._save_evaluation_text(evaluation_text)
-            
+
             return evaluation_text
         except Exception as e:
             logger.error(f"Error generating candidate evaluation: {e}")
             return f"ERROR: Failed to generate evaluation: {str(e)}"
-            
+
     async def _save_evaluation_text(self, evaluation_text: str) -> None:
         """
         Save raw evaluation text to a timestamped file in the eval_results directory.
-        
+
         Args:
             evaluation_text: The raw evaluation text to save
         """
@@ -264,57 +272,58 @@ class DataUtils:
             if not eval_dir.exists():
                 eval_dir.mkdir(parents=True)
                 logger.info(f"Created directory: {eval_dir}")
-            
+
             # Generate timestamped filename
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            
+
             # Get candidate info from interview controller if available
             candidate_name = "candidate"
             if self.interview_controller and self.interview_controller.question:
                 question_id = self.interview_controller.question.id
                 candidate_name = f"candidate_{question_id}"
-            
+
             # Create filename with timestamp and candidate name
             result_filename = f"{timestamp}_{candidate_name}_evaluation.txt"
             result_path = eval_dir / result_filename
-            
+
             # Save evaluation text
             with open(result_path, 'w') as f:
                 f.write(evaluation_text)
-                
+
             logger.info(f"Evaluation text saved to: {result_path}")
-            
+
         except Exception as e:
             logger.error(f"Error saving evaluation text: {e}")
-            
+
 # Utility functions outside the DataUtils class
+
 
 async def evaluate_from_file(file_path: str, model: str = "gpt-4", output_dir: str = "eval_results") -> str:
     """
     Utility function to evaluate a candidate directly from a transcription file.
     Saves the raw LLM response to a text file and returns it.
-    
+
     Args:
         file_path: Path to the transcription log file
         model: LLM model to use for evaluation (supports "gpt-4", "gpt-4o", "gpt-3.5-turbo", etc.)
         output_dir: Directory to save the evaluation text file
-        
+
     Returns:
         Raw evaluation text from the LLM
     """
     try:
         # Initialize evaluation agent
         evaluator = EvaluationAgent(transcription_path=file_path, model=model)
-        
+
         # Generate evaluation (raw text)
         evaluation_text = await evaluator.evaluate_candidate()
-        
+
         # Create output directory if it doesn't exist
         output_path = Path(output_dir)
         if not output_path.exists():
             output_path.mkdir(parents=True)
             logger.info(f"Created directory: {output_path}")
-        
+
         # Generate timestamped filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
@@ -325,15 +334,14 @@ async def evaluate_from_file(file_path: str, model: str = "gpt-4", output_dir: s
         # Create filename with both timestamps
         result_filename = f"{timestamp}_{transcription_timestamp}_evaluation.txt"
         result_path = output_path / result_filename
-        
+
         # Save raw evaluation text
         with open(result_path, 'w') as f:
             f.write(evaluation_text)
-            
+
         logger.info(f"Evaluation results saved to: {result_path}")
-        
+
         return evaluation_text
     except Exception as e:
         logger.error(f"Error evaluating from file: {e}")
         return f"ERROR: Failed to evaluate: {str(e)}"
-    

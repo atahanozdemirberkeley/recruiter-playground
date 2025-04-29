@@ -7,9 +7,9 @@ import logging
 from components.filewatcher import FileWatcher
 from utils.shared_state import get_data_utils
 import time
-from livekit.agents.llm import ChatMessage, ChatChunk, ChatContext
+from livekit.agents.llm import ChatChunk
 from livekit.agents.voice import ModelSettings
-from utils.template_utils import load_template
+from components.code_executor import CodeExecutor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -41,9 +41,7 @@ class InterviewController:
         logger.info(f"FileWatcher initialized for {TEST_FILE_PATH}")
 
         # Initialize CodeExecutor with API base URL
-        # self.code_executor = CodeExecutor()
-        # logger.info(
-        #     f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
+        self.code_executor = CodeExecutor()
 
         # Activity tracking
         self.heartbeat_interval = 45  # seconds

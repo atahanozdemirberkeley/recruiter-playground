@@ -1,66 +1,75 @@
-import docker
+import subprocess
 import os
 import logging
-import uuid
 import time
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, List
 import tempfile
 import shutil
-import json
-import inspect
-import requests
-from dataclasses import asdict
+import importlib.util
+import traceback
 from utils.question_models import TestCase, Question
-from urllib.parse import urljoin
-from utils.config import DOCKER_IMAGE_NAME
-import platform
 
 logger = logging.getLogger(__name__)
 
 
 class CodeExecutor:
-    """Handles code execution via REST API to Docker container service"""
+    """Handles code execution directly using local Python interpreter"""
 
     def __init__(self):
         """
-        Initialize CodeExecutor with Docker client configuration
+        Initialize CodeExecutor by confirming Python interpreter availability
         """
         try:
-            # Initialize Docker client
-            self.docker_client = docker.from_env()
-            self.docker_client.ping()
-            logger.info("Successfully connected to Docker daemon")
+            # Check if Python exists and get version
+            result = subprocess.run(
+                ["python3", "--version"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            self.python_version = result.stdout.strip()
+            logger.info(f"Found Python interpreter: {self.python_version}")
 
-            # Clean up dangling images on startup
-            self._cleanup_dangling_images()
+            # Use python3 as primary command
+            self.python_cmd = "python3"
 
-        except docker.errors.DockerException as e:
-            # If auto-detection fails, try common configurations
-            if platform.system() == 'Linux':
-                base_url = 'unix://var/run/docker.sock'
-            else:
-                # Windows/macOS typically use TCP
-                base_url = 'tcp://localhost:2375'
-
+        except (subprocess.SubprocessError, FileNotFoundError):
             try:
-                self.docker_client = docker.DockerClient(base_url=base_url)
-                self.docker_client.ping()
-                logger.info(f"Connected to Docker daemon at {base_url}")
-            except docker.errors.DockerException as e:
-                logger.error(f"Failed to connect to Docker daemon: {e}")
-                raise
+                # Try with python command if python3 fails
+                result = subprocess.run(
+                    ["python", "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                self.python_version = result.stdout.strip()
+                logger.info(f"Found Python interpreter: {self.python_version}")
 
-        self.image_name = DOCKER_IMAGE_NAME
+                # Use python as primary command
+                self.python_cmd = "python"
 
-        # Ensure we have the required image
-        self._ensure_docker_image()
+            except (subprocess.SubprocessError, FileNotFoundError) as e:
+                logger.error(f"Failed to find Python interpreter: {e}")
+                raise Exception("No Python interpreter found on system")
+
+        # Extract major.minor version
+        import re
+        version_match = re.search(r'Python (\d+\.\d+)', self.python_version)
+        if version_match:
+            self.python_version_num = float(version_match.group(1))
+            if self.python_version_num < 3.6:
+                logger.warning(
+                    f"Python version {self.python_version_num} is below recommended version 3.6")
+        else:
+            logger.warning("Could not determine Python version number")
+            self.python_version_num = 0
 
         logger.info(
-            f"CodeExecutor initialized with Docker image: {self.image_name}")
+            f"CodeExecutor initialized with Python: {self.python_version}")
 
     def _prepare_test_payload(self, test_cases: List[TestCase], mode: str) -> List[Dict]:
         """
-        Prepare test cases for API payload
+        Prepare test cases for execution
 
         Args:
             test_cases: List of TestCase objects
@@ -76,133 +85,106 @@ class CodeExecutor:
             'visible': tc.visible
         } for tc in test_cases if mode == "submit" or tc.visible]
 
-    def _setup_execution_environment(self, code_content: str, test_cases_json: str, function_name: str) -> Dict:
+    def _load_module_from_file(self, file_path: str, module_name: str):
         """
-        Set up the execution environment for the test runner
+        Dynamically load a Python module from a file path
 
         Args:
-            code_content: The user's code to test
-            test_cases_json: JSON string of test cases
-            function_name: Name of the function to test
+            file_path: Path to the Python file
+            module_name: Name to give the module
 
         Returns:
-            Dict containing container configuration and temp directory path
+            Loaded module object
         """
-        # Create temporary directory for test files
-        temp_dir = tempfile.mkdtemp()
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
-        try:
-            # Write code to test file
-            test_file = os.path.join(temp_dir, 'solution.py')
-            with open(test_file, 'w') as f:
-                f.write(code_content)
-
-            # Write test cases to file
-            test_cases_file = os.path.join(temp_dir, 'test_cases.json')
-            with open(test_cases_file, 'w') as f:
-                f.write(test_cases_json)
-
-            # Container configuration
-            container_config = {
-                'image': self.image_name,
-                'command': [
-                    'python3',              # Explicitly use python3 interpreter
-                    '/app/test_runner.py',
-                    '/app/tests/solution.py',
-                    function_name,
-                    '/app/tests/test_cases.json'
-                ],
-                'volumes': {
-                    temp_dir: {
-                        'bind': '/app/tests',
-                        'mode': 'ro'  # Read-only mount
-                    }
-                },
-                'detach': True,
-                'remove': False,  # Don't auto-remove so we can get logs
-                'network_disabled': True,  # Security: Disable network access
-                'mem_limit': '512m'     # Limit memory usage
-            }
-
-            return container_config, temp_dir
-
-        except Exception as e:
-            shutil.rmtree(temp_dir)
-            raise e
-
-    def execute_tests(self, container_config: Dict) -> Dict:
+    def execute_tests(self, solution_path: str, test_cases: List[Dict], function_name: str) -> Dict:
         """
-        Execute tests in a Docker container and return results
+        Execute tests directly by importing the solution module
 
         Args:
-            container_config: Container configuration dictionary
+            solution_path: Path to the solution.py file
+            test_cases: List of test case dictionaries
+            function_name: Name of the function to test
 
         Returns:
             Dict containing test results
         """
-        # Ensure auto-remove is disabled so we can get logs
-        container_config['remove'] = False
-        container = None
-
         try:
-            # Run the container
-            container = self.docker_client.containers.run(**container_config)
-            container_id = container.id
-            logger.info(f"Started container with ID: {container_id}")
+            # Load the solution module
+            solution_module = self._load_module_from_file(
+                solution_path, "solution")
 
-            # Wait for container to finish with timeout
-            try:
-                result = container.wait(timeout=30)
+            # Check if Solution class exists
+            if not hasattr(solution_module, "Solution"):
+                raise Exception("Solution class not found in solution file")
 
-                # Immediately get logs after container finishes
-                logs = container.logs(stdout=True, stderr=True)
-                logs_decoded = logs.decode('utf-8')
+            # Instantiate Solution class
+            solution = solution_module.Solution()
 
-                logger.info(f"DEBUG: Container logs: {logs_decoded}")
-                # Don't treat failed tests as an error, only actual execution errors
-                if result['StatusCode'] != 0:
-                    raise Exception(f"Test execution failed: {logs_decoded}")
+            # Check if the function exists in the Solution class
+            if not hasattr(solution, function_name):
+                raise Exception(
+                    f"Function {function_name} not found in Solution class")
 
-                # Try to parse the logs as JSON
+            # Run tests
+            results = []
+            passed_tests = 0
+            failed_tests = 0
+            total_time = 0
+
+            for tc in test_cases:
+                test_id = tc['id']
+                inputs = tc['inputs']
+                expected = tc['expected']
+
+                start_time = time.time()
                 try:
-                    return json.loads(logs_decoded)
-                except json.JSONDecodeError:
-                    logger.error(
-                        f"Failed to parse container logs as JSON: {logs_decoded}")
-                    raise Exception("Invalid test results format")
+                    # Call the function with arguments
+                    actual = getattr(solution, function_name)(*inputs)
+                    success = actual == expected
+                    error_msg = None
 
-            except docker.errors.NotFound:
-                logger.error(
-                    f"Container {container_id} was removed before we could get logs")
-                raise Exception("Container was removed before completion")
+                    if success:
+                        passed_tests += 1
+                    else:
+                        failed_tests += 1
 
-            except docker.errors.APIError as e:
-                if "marked for removal" in str(e):
-                    logger.error(
-                        f"Container {container_id} was marked for removal")
-                    # Try to get logs one last time
-                    try:
-                        logs = self.docker_client.api.logs(container_id)
-                        return json.loads(logs.decode('utf-8'))
-                    except:
-                        raise Exception("Could not retrieve container logs")
-                raise
+                except Exception as e:
+                    actual = None
+                    success = False
+                    error_msg = str(e) + "\n" + traceback.format_exc()
+                    failed_tests += 1
+
+                end_time = time.time()
+                test_time = end_time - start_time
+                total_time += test_time
+
+                results.append({
+                    'test_id': test_id,
+                    'inputs': inputs,
+                    'expected': expected,
+                    'actual': actual,
+                    'success': success,
+                    'error': error_msg,
+                    'time': test_time
+                })
+
+            # Prepare result
+            return {
+                'results': results,
+                'passed_tests': passed_tests,
+                'failed_tests': failed_tests,
+                'total_tests': len(test_cases),
+                'total_time': total_time
+            }
 
         except Exception as e:
             logger.error(f"Error executing tests: {e}")
             raise
-
-        finally:
-            # Clean up container if it still exists
-            if container:
-                try:
-                    # Force remove the container
-                    container.remove(force=True)
-                    logger.info(f"Cleaned up container {container_id}")
-                except docker.errors.NotFound:
-                    logger.info(f"Container {container_id} already removed")
-                except Exception as e:
-                    logger.error(f"Error removing container: {e}")
 
     def run_code(
         self,
@@ -211,7 +193,7 @@ class CodeExecutor:
         mode: str = "run"
     ) -> Dict:
         """
-        Execute code against test cases in Docker container
+        Execute code against test cases using local Python interpreter
 
         Args:
             test_file_path: Path to user's solution file
@@ -229,22 +211,21 @@ class CodeExecutor:
             test_cases = question.visible_test_cases if mode == "run" else question.all_test_cases
 
             # Prepare test cases
-            test_cases_json = json.dumps(
-                self._prepare_test_payload(test_cases, mode))
+            test_case_dicts = self._prepare_test_payload(test_cases, mode)
 
-            # Read the code file
-            with open(test_file_path, 'r') as f:
-                code_content = f.read()
+            # Create a temp directory for the solution file
+            temp_dir = tempfile.mkdtemp()
 
-            # Set up execution environment
-            container_config, temp_dir = self._setup_execution_environment(
-                code_content,
-                test_cases_json,
+            # Copy the solution file to the temp directory
+            temp_solution_path = os.path.join(temp_dir, 'solution.py')
+            shutil.copy2(test_file_path, temp_solution_path)
+
+            # Execute tests directly
+            results = self.execute_tests(
+                temp_solution_path,
+                test_case_dicts,
                 question.function_name
             )
-
-            # Execute tests
-            results = self.execute_tests(container_config)
 
             return {
                 'success': results['total_tests'] == results['passed_tests'],
@@ -272,48 +253,3 @@ class CodeExecutor:
             # Clean up temporary directory
             if temp_dir and os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
-
-            # Clean up dangling images after each run
-            self._cleanup_dangling_images()
-
-    def _ensure_docker_image(self) -> None:
-        """Ensure the required Docker image is available, pull if not"""
-        try:
-            self.docker_client.images.get(self.image_name)
-        except docker.errors.ImageNotFound:
-            logger.info(f"Pulling Docker image {self.image_name}...")
-            try:
-                self.docker_client.images.pull(self.image_name)
-                logger.info(f"Successfully pulled {self.image_name}")
-            except docker.errors.APIError as e:
-                logger.error(f"Failed to pull Docker image: {e}")
-                raise
-
-    def _cleanup_dangling_images(self) -> None:
-        """
-        Remove dangling images (unused and untagged images)
-        """
-        try:
-            # Find all dangling images
-            dangling_images = self.docker_client.images.list(
-                filters={'dangling': True}
-            )
-
-            if dangling_images:
-                logger.info(f"Found {len(dangling_images)} dangling images")
-                for image in dangling_images:
-                    try:
-                        self.docker_client.images.remove(
-                            image.id,
-                            force=True,  # Force removal even if image is being used
-                            noprune=False  # Remove untagged parents
-                        )
-                        logger.info(f"Removed dangling image: {image.id[:12]}")
-                    except docker.errors.APIError as e:
-                        logger.warning(
-                            f"Failed to remove dangling image {image.id[:12]}: {e}")
-            else:
-                logger.info("No dangling images found")
-
-        except Exception as e:
-            logger.error(f"Error cleaning up dangling images: {e}")
