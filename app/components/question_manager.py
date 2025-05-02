@@ -33,23 +33,25 @@ class QuestionManager:
         try:
             # Get questions from Supabase
             question_data_list = self.db_manager.get_questions()
-            
+
             # Process each question
             for question_data in question_data_list:
                 try:
                     # Convert database data to Question object
                     question = Question.from_dict(question_data)
                     self.questions[question.id] = question
-                    logger.info(f"Loaded question {question.id}: {question.title}")
+                    logger.info(
+                        f"Loaded question {question.id}: {question.title}")
                 except Exception as e:
                     logger.error(f"Failed to process question data: {e}")
-            
-            logger.info(f"Successfully loaded {len(self.questions)} questions from database")
+
+            logger.info(
+                f"Successfully loaded {len(self.questions)} questions from database")
         except Exception as e:
             logger.error(f"Failed to load questions from database: {e}")
             # Fallback to file-based loading if database fails
             self._load_questions_from_files()
-    
+
     def _load_questions_from_files(self):
         """Fallback method to load questions from JSON files."""
         logger.warning("Falling back to loading questions from files")
@@ -72,7 +74,7 @@ class QuestionManager:
         # Check if question is already loaded
         if question_id in self.questions:
             return self.questions[question_id]
-        
+
         # If not, try to fetch it from the database
         try:
             question_data = self.db_manager.get_question_by_id(question_id)
@@ -81,8 +83,9 @@ class QuestionManager:
                 self.questions[question_id] = question
                 return question
         except Exception as e:
-            logger.error(f"Failed to fetch question {question_id} from database: {e}")
-        
+            logger.error(
+                f"Failed to fetch question {question_id} from database: {e}")
+
         return None
 
     def get_question_prompt(self, question_id: str) -> str:
