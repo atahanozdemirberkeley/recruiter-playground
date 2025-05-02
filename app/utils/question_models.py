@@ -77,6 +77,7 @@ class TestCase:
             description=data.get('description')
         )
 
+
 @dataclass
 class Question:
     """Represents a coding interview question with its metadata and content."""
@@ -129,5 +130,53 @@ class Question:
             raise Exception(
                 f"Error loading question from {question_file}: {e}")
 
+    @classmethod
+    def from_dict(cls, db_record: Dict[str, Any]) -> 'Question':
+        """
+        Creates a Question instance from a Supabase database record.
 
+        Args:
+            db_record: Dictionary containing the database record
 
+        Returns:
+            Question object
+        """
+        try:
+            # Parse test cases from JSON if stored as string
+            test_cases_data = db_record.get('test_cases', [])
+            if isinstance(test_cases_data, str):
+                test_cases_data = json.loads(test_cases_data)
+
+            # Convert test cases to TestCase objects
+            test_cases = [TestCase.from_dict(tc) for tc in test_cases_data]
+            visible_tests = [tc for tc in test_cases if tc.visible]
+
+            # Parse hints from JSON if stored as string
+            hints = db_record.get('hints', [])
+            if isinstance(hints, str):
+                hints = json.loads(hints)
+
+            # Create solution dictionary
+            solution = {
+                'code': db_record.get('solution_code', ''),
+                'explanation': db_record.get('solution_explanation', '')
+            }
+
+            return cls(
+                id=db_record['id'],
+                title=db_record['title'],
+                difficulty=db_record['difficulty'],
+                category=db_record['category'],
+                description=db_record['description'],
+                solution=solution,
+                visible_test_cases=visible_tests,
+                all_test_cases=test_cases,
+                hints=hints if isinstance(hints, list) else [],
+                duration=db_record.get('duration_minutes', 60),
+                function_name=db_record['function_name'],
+                function_signature=db_record['function_signature'],
+                skeleton_code=db_record.get('skeleton_code', '')
+            )
+        except Exception as e:
+            raise Exception(
+                f"Error converting database record to Question: {e}")
