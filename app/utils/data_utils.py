@@ -43,26 +43,34 @@ class DataUtils:
                 rich_print("[bold green]results[/bold green]", results)
                 #
 
-                await self.send_results_to_frontend(results)
+                await self.send_results_to_frontend(results, state="run")
 
             elif packet_type == "submit_code":
                 test_file_path = self.interview_controller.file_watcher.path_to_watch
                 results = await self.interview_controller.run_code(
                     mode="submit"
                 )
-                await self.send_results_to_frontend(results)
+                await self.send_results_to_frontend(results, state="submit")
 
         except json.JSONDecodeError:
             logger.warning(f"Could not parse as JSON: {packet.data}")
         except Exception as e:
             logger.error(f"Error processing data packet: {e}")
 
-    async def send_results_to_frontend(self, results: Dict) -> None:
-        """Send test results back to frontend"""
+    async def send_results_to_frontend(self, results: Dict, state: str = 'run') -> None:
+        """Send test results back to frontend
+
+        Args:
+            results: The test results data
+            state: The state of the test results - either 'run' or 'submit'
+        """
         try:
             payload = json.dumps({
                 "type": "test_results",
-                "data": results
+                "data": {
+                    **results,
+                    "state": state
+                }
             }).encode('utf-8')
 
             await self.interview_controller.room.local_participant.publish_data(
@@ -73,7 +81,7 @@ class DataUtils:
             logger.error(f"Error sending results to frontend: {e}")
 
     async def handle_user_speech(self, msg: str) -> None:
-        """Handle user speech events."""        
+        """Handle user speech events."""
         # Take code snapshot
         code_snapshot = self.interview_controller.file_watcher._take_snapshot()
 
@@ -115,8 +123,9 @@ class DataUtils:
 
         # Generate timestamped filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.current_transcription_file = transcriptions_dir / f"{timestamp}_transcription.log"
-        
+        self.current_transcription_file = transcriptions_dir / \
+            f"{timestamp}_transcription.log"
+
         async with async_open(self.current_transcription_file, "w") as f:
             while True:
                 try:
@@ -240,14 +249,15 @@ class DataUtils:
                 logger.info(
                     f"Waiting for {self.log_queue.qsize()} pending transcription entries to be written")
                 await asyncio.sleep(1)  # Brief delay to allow queue processing
-                
+
             if not self.current_transcription_file:
                 logger.error("No transcription file available for evaluation")
                 return "ERROR: No transcription file available for evaluation"
-                
+
             # Initialize evaluation agent with specified model
-            evaluator = EvaluationAgent(transcription_path=str(self.current_transcription_file), model=model)
-            
+            evaluator = EvaluationAgent(transcription_path=str(
+                self.current_transcription_file), model=model)
+
             # Generate evaluation (raw text)
             evaluation_text = await evaluator.evaluate_candidate(chat_ctx)
 
@@ -326,11 +336,12 @@ async def evaluate_from_file(file_path: str, model: str = "gpt-4", output_dir: s
 
         # Generate timestamped filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        
+
         # Extract transcription timestamp from file path
         log_filename = os.path.basename(file_path)
-        transcription_timestamp = log_filename.split('_')[0] if '_' in log_filename else "unknown"
-        
+        transcription_timestamp = log_filename.split(
+            '_')[0] if '_' in log_filename else "unknown"
+
         # Create filename with both timestamps
         result_filename = f"{timestamp}_{transcription_timestamp}_evaluation.txt"
         result_path = output_path / result_filename
