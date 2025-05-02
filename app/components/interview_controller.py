@@ -145,18 +145,6 @@ class InterviewController:
         # Start time updates when interview starts
         asyncio.create_task(self.start_time_updates(self.room))
 
-    def add_code_snapshot(self, code: str) -> str:
-        """
-        Adds a new code snapshot with timestamp relative to interview start
-        Returns: snapshot_id
-        """
-        snapshot_id = f"snapshot_{len(self.code_snapshots)}"
-
-        self.code_snapshots[snapshot_id] = {
-            "code": code,
-            "timestamp": self.get_interview_time_since_start(formatted=False)
-        }
-        return snapshot_id
 
     async def run_code(self, mode: str = "run") -> Dict:
         """
@@ -224,12 +212,21 @@ class InterviewController:
 
         # Take final code snapshot
         final_code = self.file_watcher._take_snapshot()
-        self.add_code_snapshot(final_code)
+        final_results = await self.submit_code()
+
+
+        data_utils = get_data_utils()
+        await data_utils.log_queue.put(
+            f"[{duration}] INTERVIEW COMPLETE\n\n"
+            f"FINAL CODE:\n{final_code}\n\n"
+            f"FINAL SUBMIT RESULTS:\n{final_results}\n\n"
+            f"{'='*80}\n\n"
+        )
 
         await self.current_agent.session.shutdown(reason="Session ended")
+
         # Generate evaluation directly from DataUtils
         try:
-            data_utils = get_data_utils()
             self.evaluation_text = await data_utils.generate_candidate_evaluation()
             logger.info(
                 f"Candidate evaluation complete. Saved to eval_results directory.")
