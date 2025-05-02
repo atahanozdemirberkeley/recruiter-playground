@@ -1,16 +1,16 @@
 import json
 import logging
 import asyncio
-import time
 import os
 from datetime import datetime
 from livekit.rtc import DataPacket
-from livekit.agents import llm
-from typing import Optional, Callable, Any, Dict, Union
+from typing import Optional, Dict
 from pathlib import Path
 from aiofile import async_open
 from components.interview_controller import InterviewController
 from components.agents.evaluation_agent import EvaluationAgent
+from components.agents.coding_agent import CodingAgent
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,23 +34,26 @@ class DataUtils:
 
             elif packet_type == "run_code":
 
-                test_file_path = self.interview_controller.file_watcher.path_to_watch
-                results = await self.interview_controller.run_code(
-                    mode="run"
-                )
-                #
-                from rich import print as rich_print
-                rich_print("[bold green]results[/bold green]", results)
-                #
+                if isinstance(self.interview_controller.current_agent, CodingAgent):
 
-                await self.send_results_to_frontend(results, state="run")
+                    results = await self.interview_controller.run_code(
+                        mode="run"
+                    )
+
+                    #
+                    from rich import print as rich_print
+                    rich_print("[bold green]results[/bold green]", results)
+                    #
+
+                    await self.send_results_to_frontend(results, state="run")
 
             elif packet_type == "submit_code":
-                test_file_path = self.interview_controller.file_watcher.path_to_watch
-                results = await self.interview_controller.run_code(
-                    mode="submit"
-                )
-                await self.send_results_to_frontend(results, state="submit")
+
+                if isinstance(self.interview_controller.current_agent, CodingAgent):
+                    results = await self.interview_controller.run_code(
+                        mode="submit"
+                    )
+                    await self.send_results_to_frontend(results, state="submit")
 
         except json.JSONDecodeError:
             logger.warning(f"Could not parse as JSON: {packet.data}")

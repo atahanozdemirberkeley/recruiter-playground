@@ -64,8 +64,6 @@ async def entrypoint(ctx: JobContext):
         noise_cancellation=noise_cancellation.BVC(),
     ),)
 
-    await data_utils.send_question_to_frontend()
-
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
     asyncio.create_task(data_utils.write_transcription())

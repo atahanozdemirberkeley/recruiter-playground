@@ -19,6 +19,19 @@ class CodeExecutor:
         """
         Initialize CodeExecutor by confirming Python interpreter availability
         """
+        self.execution_count = {
+            "run": 0,
+            "submit": 0
+        }
+        self.execution_timer = {
+            "run": 0,
+            "submit": 0
+        }
+        CodeExecutor.cooldown_periods = {
+            "run": 5,  # 5 seconds cooldown for run mode
+            "submit": 30  # 30 seconds cooldown for submit mode
+        }
+
         try:
             # Check if Python exists and get version
             result = subprocess.run(
@@ -204,6 +217,26 @@ class CodeExecutor:
             Dict containing execution results
         """
         temp_dir = None
+
+        # Check if we need to enforce a cooldown period
+        current_time = time.time()
+        time_since_last_execution = current_time - \
+            self.execution_timer.get(mode, 0)
+        cooldown_period = CodeExecutor.cooldown_periods.get(mode, 0)
+
+        if time_since_last_execution < cooldown_period:
+            # If in cooldown period, return a response indicating this
+            time_remaining = cooldown_period - time_since_last_execution
+            logger.info(
+                f"Cannot execute code in {mode} mode: cooldown period active ({time_remaining:.1f}s remaining)")
+            return {
+                'success': False,
+                'cooldown': True,
+                'time_remaining': round(time_remaining, 1),
+                'error': f"Please wait {round(time_remaining, 1)} seconds before running code again in {mode} mode",
+                'mode': mode
+            }
+
         try:
             logger.info(f"Starting code execution in {mode} mode")
 
@@ -226,6 +259,10 @@ class CodeExecutor:
                 test_case_dicts,
                 question.function_name
             )
+
+            self.execution_count[mode] += 1
+            # Update the execution timer for this mode
+            self.execution_timer[mode] = time.time()
 
             return {
                 'success': results['total_tests'] == results['passed_tests'],

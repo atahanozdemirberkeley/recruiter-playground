@@ -31,6 +31,8 @@ interface TestResultsProps {
     error?: string;
     mode: string;
     state: 'run' | 'submit';
+    cooldown?: boolean;
+    time_remaining?: number;
   };
 }
 
@@ -39,6 +41,20 @@ const TestResults: React.FC<TestResultsProps> = ({ results }) => {
   
   // Determine if we're in submit or run state
   const isSubmitState = results.state === 'submit';
+  
+// Handle cooldown case
+if (!results.success && results.cooldown) {
+  return (
+    <div className="bg-gray-900 rounded-md p-4">
+      <div className="flex flex-col items-center justify-center">
+        <div className="text-amber-400 font-bold mb-2">Execution Cooldown</div>
+        <div className="bg-amber-900/50 text-amber-300 py-2 px-4 rounded-md text-center">
+          {results.error || `Please wait before running code again in ${results.mode} mode.`}
+        </div>
+      </div>
+    </div>  
+  );
+}
   
   // Handle error case
   if (!results.success && results.error) {
@@ -54,7 +70,7 @@ const TestResults: React.FC<TestResultsProps> = ({ results }) => {
   if (!results.results || !results.results.test_results || results.results.test_results.length === 0) {
     return (
       <div className="bg-gray-900 rounded-md p-4">
-        <p className="text-gray-300">No test results available.</p>
+        <p className="text-amber-400">No test results available.</p>
       </div>
     );
   }
@@ -86,10 +102,6 @@ const TestResults: React.FC<TestResultsProps> = ({ results }) => {
               ? 'Your submission did not pass all tests.' 
               : 'Your submission passed all tests!'
             }
-          </div>
-          
-          <div className="text-sm text-gray-400 mt-4">
-            Execution time: {summary.execution_time.toFixed(6)}s
           </div>
         </div>
       </div>

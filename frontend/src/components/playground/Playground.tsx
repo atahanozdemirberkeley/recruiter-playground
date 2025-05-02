@@ -129,7 +129,14 @@ export default function Playground({
       } else if (decoded.type === "test_results" && msg.topic === "test-results") {
         // Handle test results
         console.log("Test results received:", decoded.data);
-        setTestResults(decoded.data);
+        
+        // Set the state based on mode
+        const resultData = {
+          ...decoded.data,
+          state: decoded.data.mode // Use the mode as the state
+        };
+        
+        setTestResults(resultData);
       }
     },
     [transcripts, setUserCode, setQuestionDescription, setTestResults]
@@ -534,11 +541,16 @@ export default function Playground({
                   <div className="p-3 flex justify-between items-center border-b border-gray-700">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-200">Test Results</h3>
-                      {testResults.success !== undefined && (
+                      {testResults.success !== undefined && !testResults.cooldown && (
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                           testResults.success ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'
                         }`}>
                           {testResults.success ? 'Success' : 'Failed'}
+                        </span>
+                      )}
+                      {testResults.cooldown && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-800 text-amber-200">
+                          Cooldown
                         </span>
                       )}
                     </div>

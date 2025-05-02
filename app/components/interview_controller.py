@@ -165,13 +165,20 @@ class InterviewController:
         Args:
             mode: Either "run" (visible tests only) or "submit" (all tests)
         """
+
         test_file_path = self.file_watcher.path_to_watch
 
-        return self.code_executor.run_code(
+        results = self.code_executor.run_code(
             test_file_path=test_file_path,
             question=self.question,
             mode=mode
         )
+
+        # Only send test results to agent if not in cooldown
+        if not results.get('cooldown', False):
+            await self.send_test_results_to_agent(results)
+
+        return results
 
     async def submit_code(self) -> Dict:
         """Submit the code for final evaluation"""
@@ -262,6 +269,32 @@ class InterviewController:
         self.is_speech_active = False
         self.update_activity_timestamp()
         logger.info("Heartbeat timer resumed - speech ended")
+
+    async def send_test_results_to_agent(self, results: Dict):
+        """Send test results to the frontend"""
+        
+        mode = results.get('mode', 'run')
+        text_results = str(results)
+        prompt = f"""
+        The user has executed tests on their code with the following results:
+        {text_results}
+        
+        You can use this information to better understand the user's code and any issues they're facing.
+        This is provided as additional context only - no response is needed specifically about these test results unless the user asks.
+        """
+        ctx = self.current_agent.chat_ctx.copy()
+        ctx.add_message(
+            role="system",
+            content=prompt
+        )
+        await self.current_agent.update_chat_ctx(ctx)
+
+        data_utils = get_data_utils()
+        duration = self.get_interview_time_since_start()
+        await data_utils.log_queue.put(
+            f"[{duration}] TESTS {mode.upper()} RESULTS:\n{text_results}\n\n"
+            f"{'='*80}\n\n"
+        )
 
     async def start_heartbeat(self):
         """
