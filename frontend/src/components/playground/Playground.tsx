@@ -31,6 +31,7 @@ import tailwindTheme from "src/lib/tailwindTheme.preval";
 import { InterviewTimer } from "src/components/timer/InterviewTimer";
 import { Button } from "src/components/button/Button";
 import { CodeEditor } from "../codeEditor/CodeEditor";
+import TestResults from "src/components/playground/TestResults";
 
 export interface PlaygroundMeta {
   name: string;
@@ -56,6 +57,7 @@ export default function Playground({
   const [userCode, setUserCode] = useState<string>("");
   const [questionDescription, setQuestionDescription] = useState<string>("");
   const [descriptionHeight, setDescriptionHeight] = useState<number>(200);
+  const [testResults, setTestResults] = useState<any>(null);
   const { localParticipant } = useLocalParticipant();
   const resizingRef = useRef<boolean>(false);
   const startYRef = useRef<number>(0);
@@ -124,12 +126,20 @@ export default function Playground({
         
         // Set the code in the editor
         setUserCode(formattedCode);
-      } else if (decoded.type === "test_results") {
-        // Handle test results if needed
+      } else if (decoded.type === "test_results" && msg.topic === "test-results") {
+        // Handle test results
         console.log("Test results received:", decoded.data);
+        
+        // Set the state based on mode
+        const resultData = {
+          ...decoded.data,
+          state: decoded.data.mode // Use the mode as the state
+        };
+        
+        setTestResults(resultData);
       }
     },
-    [transcripts, setUserCode, setQuestionDescription]
+    [transcripts, setUserCode, setQuestionDescription, setTestResults]
   );
 
   useDataChannel(onDataReceived);
@@ -511,22 +521,59 @@ export default function Playground({
         }
       />
       <div className="flex gap-4 py-4 grow w-full h-[calc(100vh-56px)] min-h-0 overflow-hidden">
-        <div className="flex flex-col basis-1/2 gap-4 h-full min-h-0 overflow-hidden">
+        <div className="flex flex-col basis-1/2 gap-4 h-full min-h-0 overflow-hidden relative">
           <PlaygroundTile
             title="Problem"
             className="w-full h-full min-h-0 overflow-hidden"
           >
-            <CodeEditor
-              value={userCode}
-              onChange={handleCodeChange}
-              language="python"
-              theme="vs-dark"
-              placeholder="Write your solution here..."
-            />
+            <div className="relative h-full">
+              <CodeEditor
+                value={userCode}
+                onChange={handleCodeChange}
+                language="python"
+                theme="vs-dark"
+                placeholder="Write your solution here..."
+              />
+              
+              {/* Test Results Overlay - Only show when we have results */}
+              {testResults && (
+                <div className="absolute bottom-0 left-0 right-0 bg-gray-900 bg-opacity-95 z-10 border-t border-gray-700 max-h-[40%] overflow-auto shadow-lg animate-slideUp">
+                  <div className="p-3 flex justify-between items-center border-b border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-gray-200">Test Results</h3>
+                      {testResults.success !== undefined && !testResults.cooldown && (
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                          testResults.success ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'
+                        }`}>
+                          {testResults.success ? 'Success' : 'Failed'}
+                        </span>
+                      )}
+                      {testResults.cooldown && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-800 text-amber-200">
+                          Cooldown
+                        </span>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => setTestResults(null)} 
+                      className="text-gray-400 hover:text-gray-200 focus:outline-none p-1 rounded hover:bg-gray-800"
+                      aria-label="Close test results"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="p-3">
+                    <TestResults results={testResults} />
+                  </div>
+                </div>
+              )}
+            </div>
           </PlaygroundTile>
         </div>
 
-        <div className="flex flex-col basis-[30%] gap-0 h-full min-h-0 overflow-hidden">
+        <div className="flex flex-col basis-[30%] gap-4 h-full min-h-0 overflow-hidden">
           <PlaygroundTile
             title="Question Description"
             className="w-full overflow-hidden"
@@ -536,13 +583,12 @@ export default function Playground({
             {questionDescriptionContent}
           </PlaygroundTile>
           
-          {/* Resize handle - made more visible for debugging */}
+          {/* Resize handle */}
           <div 
-            className="w-full h-6 hover:bg-gray-600 cursor-ns-resize flex items-center justify-center relative z-10"
+            className="w-full h-2 hover:bg-gray-600 cursor-ns-resize flex items-center justify-center relative z-10 -mt-2 mb-2"
             onMouseDown={handleResizeMouseDown}
-            onClick={() => console.log("Resize handle clicked")}
           >
-            <div className="w-16 h-2 bg-gray-500 rounded-full"></div>
+            <div className="w-16 h-1 bg-gray-500 rounded-full"></div>
           </div>
 
           {config.settings.chat && (

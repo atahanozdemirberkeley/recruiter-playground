@@ -36,6 +36,7 @@ async def entrypoint(ctx: JobContext):
     interview_controller.room = ctx.room
     data_utils = DataUtils(interview_controller)
     set_state(data_utils, interview_controller)
+
     # Initialize the interview state
     question = question_manager.select_question(QUESTION_NUMBER)
     interview_controller.initialize_interview(question)

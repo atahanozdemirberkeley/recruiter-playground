@@ -1,0 +1,23 @@
+{
+  "scores": {
+    "algorithms": {
+      "score": 2,
+      "justification": "The candidate chose a reasonably appropriate algorithm using a dictionary and stack. However, the candidate failed to grasp the full use of the stack for maintaining the state of the open brackets and using that information to make context-aware decisions when a closing bracket is encountered. Instead, the candidate used a dictionary-based strategy to count opening and closing brackets separately which is not an optimal solution."
+    },
+    "coding": {
+      "score": 2,
+      "justification": "The candidate's code contained several syntax errors and unconventional structures. They struggled to form correct IF-ELSE statements and to cleanly structure their code. The code they provided would not run in its current state."
+    },
+    "communication": {
+      "score": 2,
+      "justification": "The candidate communicated their thought processes but overall, their explanations were unclear and vague. There were several instances where phrases and sentences were both technologically and syntactically complex, making it difficult for the interviewer to follow their thought process. The candidate did not explain their solution or approach very well."
+    },
+    "problem_solving": {
+      "score": 3,
+      "justification": "The candidate demonstrated reasonable problem-solving skills by proposing an approach to the problem. However, the candidate’s approach contained significant errors in both their understanding and implementation, and they did not ask any clarifying questions about the problem."
+    }
+  },
+  "total_score": 9,
+  "decision": "Leaning No Hire",
+  "summary": "The candidate demonstrated a basic level of problem-solving and some understanding of algorithms and data structures in their proposed solution, but their understanding was not fully accurate. Their code contained several syntax errors, and their communication was often challenging to follow, making it hard to get a clear understanding of their thought process. The candidate would benefit from further study and practice in both coding and clear communication practices."
+}

@@ -7,9 +7,9 @@ import logging
 from components.filewatcher import FileWatcher
 from utils.shared_state import get_data_utils
 import time
-from livekit.agents.llm import ChatMessage, ChatChunk, ChatContext
+from livekit.agents.llm import ChatChunk
 from livekit.agents.voice import ModelSettings
-from utils.template_utils import load_template
+from components.code_executor import CodeExecutor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -41,9 +41,7 @@ class InterviewController:
         logger.info(f"FileWatcher initialized for {TEST_FILE_PATH}")
 
         # Initialize CodeExecutor with API base URL
-        # self.code_executor = CodeExecutor()
-        # logger.info(
-        #     f"CodeExecutor initialized with API URL: {DOCKER_API_BASE_URL}")
+        self.code_executor = CodeExecutor()
 
         # Activity tracking
         self.heartbeat_interval = 45  # seconds
@@ -147,18 +145,6 @@ class InterviewController:
         # Start time updates when interview starts
         asyncio.create_task(self.start_time_updates(self.room))
 
-    def add_code_snapshot(self, code: str) -> str:
-        """
-        Adds a new code snapshot with timestamp relative to interview start
-        Returns: snapshot_id
-        """
-        snapshot_id = f"snapshot_{len(self.code_snapshots)}"
-
-        self.code_snapshots[snapshot_id] = {
-            "code": code,
-            "timestamp": self.get_interview_time_since_start(formatted=False)
-        }
-        return snapshot_id
 
     async def run_code(self, mode: str = "run") -> Dict:
         """
@@ -167,13 +153,20 @@ class InterviewController:
         Args:
             mode: Either "run" (visible tests only) or "submit" (all tests)
         """
+
         test_file_path = self.file_watcher.path_to_watch
 
-        return self.code_executor.run_code(
+        results = self.code_executor.run_code(
             test_file_path=test_file_path,
             question=self.question,
             mode=mode
         )
+
+        # Only send test results to agent if not in cooldown
+        if not results.get('cooldown', False):
+            await self.send_test_results_to_agent(results)
+
+        return results
 
     async def submit_code(self) -> Dict:
         """Submit the code for final evaluation"""
@@ -219,12 +212,21 @@ class InterviewController:
 
         # Take final code snapshot
         final_code = self.file_watcher._take_snapshot()
-        self.add_code_snapshot(final_code)
+        final_results = await self.submit_code()
+
+
+        data_utils = get_data_utils()
+        await data_utils.log_queue.put(
+            f"[{duration}] INTERVIEW COMPLETE\n\n"
+            f"FINAL CODE:\n{final_code}\n\n"
+            f"FINAL SUBMIT RESULTS:\n{final_results}\n\n"
+            f"{'='*80}\n\n"
+        )
 
         await self.current_agent.session.shutdown(reason="Session ended")
+
         # Generate evaluation directly from DataUtils
         try:
-            data_utils = get_data_utils()
             self.evaluation_text = await data_utils.generate_candidate_evaluation()
             logger.info(
                 f"Candidate evaluation complete. Saved to eval_results directory.")
@@ -264,6 +266,32 @@ class InterviewController:
         self.is_speech_active = False
         self.update_activity_timestamp()
         logger.info("Heartbeat timer resumed - speech ended")
+
+    async def send_test_results_to_agent(self, results: Dict):
+        """Send test results to the frontend"""
+        
+        mode = results.get('mode', 'run')
+        text_results = str(results)
+        prompt = f"""
+        The user has executed tests on their code with the following results:
+        {text_results}
+        
+        You can use this information to better understand the user's code and any issues they're facing.
+        This is provided as additional context only - no response is needed specifically about these test results unless the user asks.
+        """
+        ctx = self.current_agent.chat_ctx.copy()
+        ctx.add_message(
+            role="system",
+            content=prompt
+        )
+        await self.current_agent.update_chat_ctx(ctx)
+
+        data_utils = get_data_utils()
+        duration = self.get_interview_time_since_start()
+        await data_utils.log_queue.put(
+            f"[{duration}] TESTS {mode.upper()} RESULTS:\n{text_results}\n\n"
+            f"{'='*80}\n\n"
+        )
 
     async def start_heartbeat(self):
         """

@@ -30,3 +30,4 @@ async def finish_interview():
     logger.info("Finishing the interview")
     interview_controller = get_interview_controller()
     return interview_controller.finish_interview()
+
