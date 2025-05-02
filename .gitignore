@@ -65,6 +65,9 @@ app/new/
 *.egg-info
 *.egg
 
+
+app/KMS
+app/eval_results
 # Python
 __pycache__/
 *.py[cod]
