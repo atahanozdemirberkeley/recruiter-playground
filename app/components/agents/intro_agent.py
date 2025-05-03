@@ -1,11 +1,8 @@
-from livekit.agents import Agent, function_tool, ChatContext, ChatMessage
+from livekit.agents import Agent, function_tool
 from utils.template_utils import load_template
 from utils.shared_state import get_interview_controller, get_data_utils
 from components.tools import get_interview_time_left
 from components.agents.coding_agent import CodingAgent
-from utils.data_utils import DataUtils
-import time
-import asyncio
 import logging
 
 logger = logging.getLogger(__name__)

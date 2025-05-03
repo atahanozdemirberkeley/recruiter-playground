@@ -140,17 +140,6 @@ class DataUtils:
                 except Exception as e:
                     logger.error(f"Error writing transcription: {e}")
 
-    async def finish_queue(self, shutdown_reason=None) -> None:
-        """Clean up the log queue and wait for write task completion.
-
-        Args:
-            shutdown_reason: The reason for shutdown (passed by LiveKit callback)
-        """
-        logger.info(f"Finishing queue, shutdown reason: {shutdown_reason}")
-        await self.log_queue.put(None)
-        # Wait for any pending writes to complete
-        await asyncio.sleep(0.1)  # Small delay to ensure queue processing
-
     async def send_question_to_frontend(self) -> None:
         """Send question description and skeleton code to the frontend code editor."""
         try:

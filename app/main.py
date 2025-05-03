@@ -11,6 +11,7 @@ from components.agents.intro_agent import IntroAgent
 import os
 import logging
 from livekit.rtc import DataPacket
+from livekit import api
 from utils.data_utils import DataUtils
 from utils.shared_state import set_state, set_session, get_interview_controller
 
@@ -30,10 +31,18 @@ async def entrypoint(ctx: JobContext):
 
     logger.info("[DEBUG] Connected to room")
 
+    # Create LiveKit API client
+    api_client = api.LiveKitAPI(
+        os.getenv('LIVEKIT_URL'),
+        os.getenv('LIVEKIT_API_KEY'),
+        os.getenv('LIVEKIT_API_SECRET'),
+    )
+
     # Initialize components
     question_manager = QuestionManager()
     interview_controller = InterviewController(question_manager)
     interview_controller.room = ctx.room
+    interview_controller.api_client = api_client  # Store API client
     data_utils = DataUtils(interview_controller)
     set_state(data_utils, interview_controller)
 
@@ -98,16 +107,23 @@ async def entrypoint(ctx: JobContext):
         asyncio.create_task(data_utils.process_data_packet(packet))
 
     ########### END EVENT LISTENERS ###########
-
-    # Add shutdown callback for transcription writing
-    ctx.add_shutdown_callback(data_utils.finish_queue)
+    
+    # Add shutdown callback for evaluation and room deletion
+    ctx.add_shutdown_callback(interview_controller.eval_and_send_results)
 
     # Keep the agent running
     while True:
-
         if interview_controller.is_interview_complete:
-            await ctx.shutdown(reason="Session ended")
-            break
+            # Delete the room to disconnect everyone
+            try:
+                if ctx.room:
+                    await api_client.room.delete_room(api.DeleteRoomRequest(
+                        room=ctx.room.name,
+                    ))
+                    logger.info(f"Room {ctx.room.name} deleted successfully")
+            except Exception as e:
+                logger.error(f"Error deleting room: {e}")
+                break
 
         await asyncio.sleep(1)
 
