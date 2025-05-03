@@ -31,7 +31,7 @@ export const PlaygroundHeader = ({
       <div className="flex items-center gap-3">
         <LogoMark />
         <div className="text-xl font-medium header-gradient">
-          {"Recurit · Technical AI Interview"}
+          Recurit · Technical AI Interview
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -44,7 +44,7 @@ export const PlaygroundHeader = ({
           onClick={() => {
             onConnectClicked();
           }}
-          className="button-recurit text-white shadow-recurit transition-all duration-300 transform hover:-translate-y-0.5"
+          className="button-recurit text-white transition-all duration-300"
         >
           {connectionState === ConnectionState.Connecting ? (
             <LoadingSVG />

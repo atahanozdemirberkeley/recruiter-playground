@@ -33,7 +33,7 @@ export const ChatTile = ({ messages, accentColor }: ChatTileProps) => {
       >
         <div className="flex flex-col min-h-full justify-end px-2">
           {messages.length === 0 && (
-            <div className="text-gray-400 text-center py-6 italic">
+            <div className="text-center py-6 italic" style={{color: "rgb(115 115 115 / var(--tw-text-opacity, 1))"}}>
               No messages yet. The conversation will appear here.
             </div>
           )}

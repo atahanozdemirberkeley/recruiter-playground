@@ -18,6 +18,10 @@
   }
 }
 
+:root {
+  --standard-gray: rgb(115 115 115 / var(--tw-text-opacity, 1));
+}
+
 body {
   background: radial-gradient(circle at center, #121830 0%, #0a0a14 100%);
   font-family: 'Inter', sans-serif;
@@ -47,7 +51,7 @@ body {
   transition: none;
 }
 
-.perspective-hover:hover {
+.perspective-hover {
   transform: none;
   box-shadow: none;
 }
@@ -120,7 +124,13 @@ body {
 }
 
 .button-recurit {
-  @apply bg-recurit-accent hover:bg-recurit-accent/80 text-white rounded-md transition-all duration-300 p-2 font-medium;
+  @apply bg-recurit-accent/80 text-white rounded-md  font-medium;
+}
+
+/* Override all text-gray classes with standard gray */
+.text-gray-100, .text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500, 
+.text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900 {
+  color: var(--standard-gray) !important;
 }
 
 /* Monaco editor overrides */

@@ -31,7 +31,6 @@ const themeColors = [
   "violet",
   "rose",
   "pink",
-  "teal",
 ];
 
 const inter = Inter({ subsets: ["latin"] });

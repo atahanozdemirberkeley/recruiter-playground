@@ -11,31 +11,17 @@ export const ColorPicker = ({
   selectedColor,
   onSelect,
 }: ColorPickerProps) => {
-  const [isHovering, setIsHovering] = useState(false);
-  const onMouseEnter = () => {
-    setIsHovering(true);
-  };
-  const onMouseLeave = () => {
-    setIsHovering(false);
-  };
-
   return (
-    <div
-      className="flex flex-row gap-1 py-2 flex-wrap"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
+    <div className="flex flex-row gap-1 py-2 flex-wrap">
       {colors.map((color) => {
         const isSelected = color === selectedColor;
-        const saturation = !isHovering && !isSelected ? "saturate-[0.25]" : "";
         const borderColor = isSelected
           ? `border border-${color}-800`
           : "border-transparent";
-        const opacity = isSelected ? `opacity-100` : "opacity-20";
         return (
           <div
             key={color}
-            className={`${saturation} rounded-md p-1 border-2 ${borderColor} cursor-pointer hover:opacity-100 transition transition-all duration-200 ${opacity} hover:scale-[1.05]`}
+            className={`rounded-md p-1 border-2 ${borderColor} cursor-pointer opacity-100 ${isSelected ? "opacity-100" : ""}`}
             onClick={() => {
               onSelect(color);
             }}
