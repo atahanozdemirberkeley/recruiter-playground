@@ -510,7 +510,10 @@ export default function Playground({
   }, [handleResizeMouseMove, handleResizeMouseUp]);
 
   return (
-    <>
+    <div className="perspective-container flex flex-col w-full h-screen overflow-hidden bg-gradient-radial from-recurit-blue to-recurit-darker">
+      {/* Header now has fixed positioning, so we add a spacer */}
+      <div style={{ height: headerHeight + "px" }}></div>
+      
       <PlaygroundHeader
         title={config.title}
         height={headerHeight}
@@ -520,8 +523,13 @@ export default function Playground({
           onConnect(roomState === ConnectionState.Disconnected)
         }
       />
-      <div className="flex gap-4 py-4 grow w-full h-[calc(100vh-56px)] min-h-0 overflow-hidden">
-        <div className="flex flex-col basis-1/2 gap-4 h-full min-h-0 overflow-hidden relative">
+      
+      {/* Add decorative blur elements */}
+      <div className="decorative-blur w-64 h-64 -top-16 -left-16 bg-recurit-purple/20"></div>
+      <div className="decorative-blur w-80 h-80 bottom-20 right-0 bg-recurit-accent/10"></div>
+      
+      <div className="flex gap-6 p-6 grow w-full h-[calc(100vh-56px)] min-h-0 overflow-hidden relative">
+        <div className="flex flex-col basis-1/2 gap-6 h-full min-h-0 overflow-hidden">
           <PlaygroundTile
             title="Problem"
             className="w-full h-full min-h-0 overflow-hidden"
@@ -537,26 +545,26 @@ export default function Playground({
               
               {/* Test Results Overlay - Only show when we have results */}
               {testResults && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gray-900 bg-opacity-95 z-10 border-t border-gray-700 max-h-[40%] overflow-auto shadow-lg animate-slideUp">
-                  <div className="p-3 flex justify-between items-center border-b border-gray-700">
+                <div className="absolute bottom-0 left-0 right-0 bg-recurit-blue/70 backdrop-blur-sm z-10 border-t border-gray-700 max-h-[40%] overflow-auto shadow-lg animate-slideUp">
+                  <div className="p-3 flex justify-between items-center border-b border-gray-700/50">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-200">Test Results</h3>
+                      <h3 className="text-sm font-medium text-white">Test Results</h3>
                       {testResults.success !== undefined && !testResults.cooldown && (
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                          testResults.success ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'
+                          testResults.success ? 'bg-green-500/30 text-green-300' : 'bg-red-500/30 text-red-300'
                         }`}>
                           {testResults.success ? 'Success' : 'Failed'}
                         </span>
                       )}
                       {testResults.cooldown && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-800 text-amber-200">
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/30 text-amber-300">
                           Cooldown
                         </span>
                       )}
                     </div>
                     <button 
                       onClick={() => setTestResults(null)} 
-                      className="text-gray-400 hover:text-gray-200 focus:outline-none p-1 rounded hover:bg-gray-800"
+                      className="text-gray-400 hover:text-white focus:outline-none p-1 rounded hover:bg-recurit-blue/30 transition-colors duration-200"
                       aria-label="Close test results"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -573,7 +581,7 @@ export default function Playground({
           </PlaygroundTile>
         </div>
 
-        <div className="flex flex-col basis-[30%] gap-4 h-full min-h-0 overflow-hidden">
+        <div className="flex flex-col basis-[30%] gap-6 h-full min-h-0 overflow-hidden">
           <PlaygroundTile
             title="Question Description"
             className="w-full overflow-hidden"
@@ -585,10 +593,10 @@ export default function Playground({
           
           {/* Resize handle */}
           <div 
-            className="w-full h-2 hover:bg-gray-600 cursor-ns-resize flex items-center justify-center relative z-10 -mt-2 mb-2"
+            className="w-full h-2 hover:bg-recurit-blue/30 cursor-ns-resize flex items-center justify-center relative z-10 -mt-3 mb-3"
             onMouseDown={handleResizeMouseDown}
           >
-            <div className="w-16 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-16 h-1 bg-recurit-accent/50 rounded-full"></div>
           </div>
 
           {config.settings.chat && (
@@ -604,13 +612,13 @@ export default function Playground({
 
         <PlaygroundTile
           padding={false}
-          backgroundColor="gray-950"
+          backgroundColor="transparent"
           className="basis-1/5 h-full min-h-0 overflow-hidden"
           childrenClassName="h-full grow items-start overflow-y-auto"
         >
           {settingsTileContent}
         </PlaygroundTile>
       </div>
-    </>
+    </div>
   );
 }

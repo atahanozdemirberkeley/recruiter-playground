@@ -91,7 +91,7 @@ export function HomeInner() {
         <meta property="og:image:height" content="630" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="relative flex flex-col justify-center px-4 items-center h-full w-full bg-black repeating-square-background">
+      <main className="relative flex flex-col justify-center px-4 items-center h-full w-full" style={{ background: "radial-gradient(circle at center, #121830 0%, #070710 100%)" }}>
         <AnimatePresence>
           {toastMessage && (
             <motion.div

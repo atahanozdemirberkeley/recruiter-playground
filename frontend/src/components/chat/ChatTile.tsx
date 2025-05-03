@@ -27,8 +27,16 @@ export const ChatTile = ({ messages, accentColor }: ChatTileProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={containerRef} className="flex-1 overflow-y-auto pb-4">
-        <div className="flex flex-col min-h-full justify-end px-4">
+      <div 
+        ref={containerRef} 
+        className="flex-1 overflow-y-auto pb-4"
+      >
+        <div className="flex flex-col min-h-full justify-end px-2">
+          {messages.length === 0 && (
+            <div className="text-gray-400 text-center py-6 italic">
+              No messages yet. The conversation will appear here.
+            </div>
+          )}
           {messages.map((message, index, allMsg) => {
             const hideName =
               index >= 1 && allMsg[index - 1].name === message.name;
