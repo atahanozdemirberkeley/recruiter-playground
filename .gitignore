@@ -94,6 +94,9 @@ transcriptions.log
 **/app/transcriptions.log
 **/*.log
 **/test.py
+/app/transcriptions
+/app/eval_results
+/app/KMS
 
 # Virtual Environment
 app/new/

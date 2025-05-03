@@ -29,5 +29,5 @@ async def finish_interview():
     """Finish the interview when the coding portion of the interview is complete."""
     logger.info("Finishing the interview")
     interview_controller = get_interview_controller()
-    return interview_controller.finish_interview()
+    await interview_controller.finish_interview()
 

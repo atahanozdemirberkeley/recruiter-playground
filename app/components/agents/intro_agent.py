@@ -1,7 +1,7 @@
 from livekit.agents import Agent, function_tool, ChatContext, ChatMessage
 from utils.template_utils import load_template
 from utils.shared_state import get_interview_controller, get_data_utils
-from components.tools import get_interview_time_left
+from components.tools import get_interview_time_left, finish_interview
 from components.agents.coding_agent import CodingAgent
 from utils.data_utils import DataUtils
 import time
@@ -21,7 +21,7 @@ class IntroAgent(Agent):
         self.template = load_template('template_intro_agent')
         super().__init__(
             instructions=self.template,
-            tools=[get_interview_time_left]
+            tools=[get_interview_time_left, finish_interview]
         )
         self.interview_controller = get_interview_controller()
         self.data_utils = get_data_utils()
@@ -68,14 +68,14 @@ class IntroAgent(Agent):
             # Fallback to a generic template
             return ""
 
-    @function_tool()
-    async def handoff_to_coding_agent(self):
-        """Hand off to the coding agent when the introduction is complete and
-        the candidate is ready to start the coding portion of the interview.
-        """
-        # Send question data to frontend for code editor
-        data_utils = get_data_utils()
-        await data_utils.send_question_to_frontend()
-        self.interview_controller.stage_timestamps["intro_end"] = int(
-            self.interview_controller.get_interview_time_since_start())
-        return CodingAgent()
+    # @function_tool()
+    # async def handoff_to_coding_agent(self):
+    #     """Hand off to the coding agent when the introduction is complete and
+    #     the candidate is ready to start the coding portion of the interview.
+    #     """
+    #     # Send question data to frontend for code editor
+    #     data_utils = get_data_utils()
+    #     await data_utils.send_question_to_frontend()
+    #     self.interview_controller.stage_timestamps["intro_end"] = int(
+    #         self.interview_controller.get_interview_time_since_start())
+    #     return CodingAgent()

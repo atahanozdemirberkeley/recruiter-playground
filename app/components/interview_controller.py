@@ -10,6 +10,7 @@ import time
 from livekit.agents.llm import ChatChunk
 from livekit.agents.voice import ModelSettings
 from components.code_executor import CodeExecutor
+from livekit import api
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,6 +23,7 @@ class InterviewController:
         self.question_manager = question_manager
         self.room = None
         self.current_agent = None
+        self.api_client = None  # Will be set from main.py
 
         # Properties from former InterviewState
         self.question = None
@@ -153,9 +155,7 @@ class InterviewController:
         Args:
             mode: Either "run" (visible tests only) or "submit" (all tests)
         """
-
         test_file_path = self.file_watcher.path_to_watch
-
         results = self.code_executor.run_code(
             test_file_path=test_file_path,
             question=self.question,
@@ -214,7 +214,6 @@ class InterviewController:
         final_code = self.file_watcher._take_snapshot()
         final_results = await self.submit_code()
 
-
         data_utils = get_data_utils()
         await data_utils.log_queue.put(
             f"[{duration}] INTERVIEW COMPLETE\n\n"
@@ -223,10 +222,13 @@ class InterviewController:
             f"{'='*80}\n\n"
         )
 
-        await self.current_agent.session.shutdown(reason="Session ended")
-
+        # Set interview as complete
+        self.is_interview_complete = True
+    
+    async def eval_and_send_results(self, reason=None):
         # Generate evaluation directly from DataUtils
         try:
+            data_utils = get_data_utils()
             self.evaluation_text = await data_utils.generate_candidate_evaluation()
             logger.info(
                 f"Candidate evaluation complete. Saved to eval_results directory.")
@@ -235,6 +237,7 @@ class InterviewController:
 
         # Notify frontend that interview is complete
         try:
+            duration = self.get_interview_time_since_start(formatted=True)
             payload = json.dumps({
                 "type": "interview_complete",
                 "data": {
@@ -248,7 +251,6 @@ class InterviewController:
                 payload,
                 topic="interview-status"
             )
-
         except Exception as e:
             logger.error(f"Error publishing interview completion: {e}")
 
