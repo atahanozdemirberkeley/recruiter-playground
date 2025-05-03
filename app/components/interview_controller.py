@@ -222,6 +222,8 @@ class InterviewController:
             f"{'='*80}\n\n"
         )
 
+        await self.current_agent.session.say("See you next time!")
+
         # Set interview as complete
         self.is_interview_complete = True
     
