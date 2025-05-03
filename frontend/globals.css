@@ -16,14 +16,25 @@
   .difficulty-hard {
     @apply bg-red-500/30 text-red-300;
   }
+  
+  .bg-gradient-radial {
+    background-image: radial-gradient(circle at 50% 20%, rgba(80, 65, 119, 0.3) 0%, rgba(10, 15, 29, 0.8) 70%);
+  }
 }
 
 :root {
   --standard-gray: rgb(115 115 115 / var(--tw-text-opacity, 1));
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background: radial-gradient(circle at center, #121830 0%, #0a0a14 100%);
+  background-image: radial-gradient(circle at 50% 20%, rgba(80, 65, 119, 0.3) 0%, rgba(10, 15, 29, 0.8) 70%);
+  background-size: 100% 100%;
+  background-attachment: fixed;
   font-family: 'Inter', sans-serif;
   --lk-va-bar-gap: 4px;
   --lk-va-bar-width: 4px;
@@ -41,6 +52,9 @@ body {
   height: 100vh;
   position: fixed;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background: none;
 }
 
 .perspective-container {

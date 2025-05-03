@@ -139,9 +139,12 @@ module.exports = {
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'spin-slow': 'spin 3s linear infinite',
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-      },
+      
+			backgroundImage: {
+				'gradient-radial': 'radial-gradient(circle at 50% 20%, rgba(80, 65, 119, 0.3) 0%, rgba(10, 15, 29, 0.8) 70%)',
+				'grid-pattern': "url('/lovable-uploads/4724b777-ce78-4151-bdd1-88996fbdbca8.png')",
+				'app-gradient': 'linear-gradient(to bottom right, #121830, #0a0f1d)',
+			},      
       perspective: {
         'none': 'none',
         '1500': '1500px',

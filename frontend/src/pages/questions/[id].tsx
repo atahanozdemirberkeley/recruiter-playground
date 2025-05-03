@@ -115,12 +115,6 @@ export function QuestionInner() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="relative flex flex-col justify-center px-4 items-center h-full w-full bg-black repeating-square-background">
-        {questionInfo && (
-          <div className="absolute top-0 left-0 p-4 z-10">
-            <h1 className="text-xl font-semibold text-white">{questionInfo.title}</h1>
-            <div className="text-gray-400 text-sm">Question ID: {questionInfo.id}</div>
-          </div>
-        )}
         <AnimatePresence>
           {toastMessage && (
             <motion.div

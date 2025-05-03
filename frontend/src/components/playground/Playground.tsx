@@ -183,17 +183,17 @@ export default function Playground({
     );
   }, [agentVideoTrack, config, roomState]);
 
-  useEffect(() => {
-    document.body.style.setProperty(
-      "--lk-theme-color",
-      // @ts-ignore
-      tailwindTheme.colors[config.settings.theme_color]["500"]
-    );
-    document.body.style.setProperty(
-      "--lk-drop-shadow",
-      `var(--lk-theme-color) 0px 0px 18px`
-    );
-  }, [config.settings.theme_color]);
+  // useEffect(() => {
+  //   document.body.style.setProperty(
+  //     "--lk-theme-color",
+  //     // @ts-ignore
+  //     tailwindTheme.colors[config.settings.theme_color]["500"]
+  //   );
+  //   document.body.style.setProperty(
+  //     "--lk-drop-shadow",
+  //     `var(--lk-theme-color) 0px 0px 18px`
+  //   );
+  // }, [config.settings.theme_color]);
 
   const agentAudioVisualizer = useMemo(() => {
     if (!voiceAssistant.audioTrack) {
