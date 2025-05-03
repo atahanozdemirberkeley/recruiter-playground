@@ -21,9 +21,8 @@ load_dotenv()
 
 QUESTION_NUMBER = 2
 
-
 async def entrypoint(ctx: JobContext):
-
+    
     logger.info("[DEBUG] Starting entrypoint")
 
     # Connect to room

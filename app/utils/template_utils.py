@@ -34,7 +34,7 @@ def load_template(template_path: str, project_root: Optional[str] = None) -> str
             full_path = template_path
         else:
             # Otherwise join with templates directory
-            full_path = os.path.join(project_root, "templates", template_path)
+            full_path = os.path.join(project_root, "app", "templates", template_path)
 
             # If path doesn't include .txt extension, add it
             if not full_path.endswith('.txt'):
@@ -70,7 +70,7 @@ def save_prompt(prompt_name: str, content: str, project_root: Optional[str] = No
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(os.path.dirname(current_dir))
 
-        prompts_dir = os.path.join(project_root, "prompts")
+        prompts_dir = os.path.join(project_root, "app", "prompts")
 
         # Add .txt extension if not present
         if not prompt_name.endswith('.txt'):
