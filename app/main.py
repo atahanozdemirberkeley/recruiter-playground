@@ -13,12 +13,20 @@ import logging
 from livekit.rtc import DataPacket
 from utils.data_utils import DataUtils
 from utils.shared_state import set_state, set_session, get_interview_controller
+from fastapi import FastAPI
+# Import our new API setup utilities
+from utils.api_setup import setup_api
 
 console = Console()
 logger = logging.getLogger(__name__)
 load_dotenv()
 
 QUESTION_NUMBER = 2
+
+# Create FastAPI instance
+app = FastAPI()
+# Setup API with CORS and routes
+setup_api(app)
 
 
 async def entrypoint(ctx: JobContext):
@@ -75,9 +83,11 @@ async def entrypoint(ctx: JobContext):
     @session.on("conversation_item_added")
     def on_conversation_item_added(ev: ConversationItemAddedEvent):
         if ev.item.role == "user":
-            asyncio.create_task(data_utils.handle_user_speech(ev.item.text_content))
+            asyncio.create_task(
+                data_utils.handle_user_speech(ev.item.text_content))
         elif ev.item.role == "assistant":
-            asyncio.create_task(data_utils.handle_agent_speech(ev.item.text_content))
+            asyncio.create_task(
+                data_utils.handle_agent_speech(ev.item.text_content))
 
     @session.on("user_state_changed")
     def on_user_state_changed(ev: UserStateChangedEvent):
