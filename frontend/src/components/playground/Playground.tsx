@@ -46,6 +46,60 @@ export interface PlaygroundProps {
 
 const headerHeight = 56;
 
+// Helper function to normalize code string by converting literal \n and \t to actual newlines and tabs
+const normalizeCodeString = (code: string): string => {
+  if (!code) return '';
+  
+  // Replace literal escape sequences with actual characters
+  return code
+    .replace(/\\n/g, '\n')   // Convert literal \n to newline
+    .replace(/\\t/g, '\t')   // Convert literal \t to tab
+    .replace(/\\r/g, '\r');  // Convert literal \r to carriage return
+};
+
+// Helper function to format skeleton code with proper indentation
+const formatSkeletonCode = (code: string): string => {
+  if (!code) return '';
+  
+  // Split by lines to process
+  const lines = code.split('\n');
+  
+  // Detect indentation style (spaces or tabs)
+  const indentationType = lines.find((line: string) => 
+    line.startsWith(' ') || line.startsWith('\t'))?.match(/^(\s+)/)?.[0] || '    ';
+  
+  // Format the code
+  const processedLines = lines.map((line: string, index: number) => {
+    // Preserve empty lines
+    if (line.trim() === '') return '';
+    
+    // Count leading whitespace to determine indentation level
+    const match = line.match(/^(\s*)/);
+    const leadingWhitespace = match ? match[0] : '';
+    const indentationLevel = leadingWhitespace.length / (indentationType.length || 4);
+    
+    // If line has content but missing proper indentation
+    if (line.trim().length && !leadingWhitespace && indentationLevel === 0) {
+      // First level indentation for lines that should be indented
+      if (line.trim().endsWith(':')) {
+        return line;
+      }
+      
+      // Check if previous lines indicate this should be indented
+      if (index > 0) {
+        const prevLine = lines[index - 1];
+        if (prevLine.trim().endsWith(':')) {
+          return indentationType + line.trim();
+        }
+      }
+    }
+    
+    return line;
+  });
+  
+  return processedLines.join('\n');
+};
+
 export default function Playground({
   logo,
   themeColors,
@@ -121,8 +175,11 @@ export default function Playground({
         // Store description in separate state
         setQuestionDescription(description || "");
         
+        // Normalize the code string to convert escape sequences to actual characters
+        const normalizedCode = normalizeCodeString(skeleton_code || '');
+        
         // Create formatted code with only the skeleton code
-        const formattedCode = `${skeleton_code || ''}`;
+        const formattedCode = formatSkeletonCode(normalizedCode);
         
         // Set the code in the editor
         setUserCode(formattedCode);
