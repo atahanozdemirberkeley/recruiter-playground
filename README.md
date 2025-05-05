@@ -35,3 +35,6 @@ LIVEKIT_API_SECRET=secret
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
 LIVEKIT_URL=ws://localhost:7880
 ```
+
+## Updated
+Last updated: $(date)
