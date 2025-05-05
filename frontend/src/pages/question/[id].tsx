@@ -1,72 +1,46 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import Playground from 'src/components/playground/Playground';
+import { ConnectionProvider, useConnection } from 'src/hooks/useConnection';
+import { ToastProvider } from 'src/components/toast/ToasterProvider';
 
-interface QuestionPageProps {
-  // Add any props you might need
-}
+// Define colors for theme
+const themeColors = [
+  "recurit-accent", // Add the main recurit accent color first
+  "cyan",
+  "green",
+  "amber",
+  "blue",
+  "violet",
+  "rose",
+  "pink",
+  "teal",
+];
 
-export default function QuestionPage(props: QuestionPageProps) {
+export default function QuestionPage() {
   const router = useRouter();
   const { id, title } = router.query;
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [questionInfo, setQuestionInfo] = useState<{ id: string; title: string } | null>(null);
 
+  // Set question info from URL parameters
   useEffect(() => {
-    if (!router.isReady) return;
-    
-    async function loadQuestion() {
-      try {
-        setLoading(true);
-        
-        // Example of how to make a request to your backend API
-        // Replace this with your actual API endpoint
-        const response = await fetch(`/api/questions/${id}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to load question data');
-        }
-        
-        const data = await response.json();
-        console.log('Question data loaded:', data);
-        
-        // Here you would typically set question data to state
-        // setQuestionData(data);
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Error loading question:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setLoading(false);
-      }
+    if (router.isReady && id && title) {
+      setQuestionInfo({
+        id: id as string,
+        title: title as string
+      });
+      
+      // Log for debugging
+      console.log('Question info from URL:', { id, title });
     }
-    
-    loadQuestion();
-  }, [router.isReady, id]);
+  }, [router.isReady, id, title]);
 
   // Handle loading state
-  if (loading) {
+  if (!questionInfo) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  // Handle error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-8 max-w-md">
-          <h2 className="text-xl font-semibold mb-4">Error Loading Question</h2>
-          <p>{error}</p>
-          <button 
-            onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 transition-colors"
-          >
-            Go Back
-          </button>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-radial from-recurit-blue to-recurit-darker">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-recurit-accent"></div>
       </div>
     );
   }
@@ -74,35 +48,45 @@ export default function QuestionPage(props: QuestionPageProps) {
   return (
     <>
       <Head>
-        <title>{title ? `${title} | Coding Challenge` : 'Coding Challenge'}</title>
+        <title>{questionInfo.title ? `${questionInfo.title} | Recurit Challenge` : 'Coding Challenge'}</title>
       </Head>
       
-      <main className="min-h-screen bg-black text-white">
-        <div className="container mx-auto py-8">
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">{title}</h1>
-            <button 
-              onClick={() => router.back()}
-              className="px-3 py-1 bg-gray-800 rounded hover:bg-gray-700 transition-colors"
-            >
-              Back
-            </button>
-          </div>
-          
-          {/* This is where you would render your playground component */}
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <p className="text-lg mb-4">
-              Question ID: {id}
-            </p>
-            
-            {/* Replace this with your actual playground component */}
-            <div className="bg-gray-800 p-4 rounded-md">
-              <p className="text-gray-300 mb-2">This is where your coding playground would go.</p>
-              <p className="text-gray-400">The data for this question has been loaded and is ready for use.</p>
-            </div>
-          </div>
-        </div>
-      </main>
+      <ToastProvider>
+        <ConfigProvider>
+          <ConnectionProvider>
+            <PlaygroundWithConnection questionId={questionInfo.id} questionTitle={questionInfo.title} />
+          </ConnectionProvider>
+        </ConfigProvider>
+      </ToastProvider>
     </>
   );
+}
+
+function PlaygroundWithConnection({ questionId, questionTitle }: { questionId: string, questionTitle: string }) {
+  const { shouldConnect, wsUrl, token, mode, connect, disconnect } = useConnection();
+  
+  const handleConnect = async (c: boolean, opts?: { token: string; url: string }) => {
+    if (c) {
+      // When connecting, store question info in localStorage for main.py to access
+      localStorage.setItem('questionId', questionId);
+      localStorage.setItem('questionTitle', questionTitle);
+      
+      // Connect to the server
+      connect(mode);
+    } else {
+      disconnect();
+    }
+  };
+
+  return (
+    <Playground
+      themeColors={themeColors}
+      onConnect={handleConnect}
+    />
+  );
+}
+
+// Add ConfigProvider if not imported automatically
+function ConfigProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 } 

@@ -4,15 +4,14 @@ import {
   StartAudio,
 } from "@livekit/components-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Inter } from "next/font/google";
 import Head from "next/head";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from 'next/router';
 
 import { PlaygroundConnect } from "src/components/PlaygroundConnect";
 import Playground from "src/components/playground/Playground";
 import {
   PlaygroundToast,
-  ToastType,
 } from "src/components/toast/PlaygroundToast";
 import { ConfigProvider, useConfig } from "src/hooks/useConfig";
 import {
@@ -20,9 +19,9 @@ import {
   ConnectionProvider,
   useConnection,
 } from "src/hooks/useConnection";
-import { useMemo } from "react";
 import { ToastProvider, useToast } from "src/components/toast/ToasterProvider";
 
+// Define colors for theme
 const themeColors = [
   "cyan",
   "green",
@@ -31,28 +30,50 @@ const themeColors = [
   "violet",
   "rose",
   "pink",
+  "teal",
 ];
 
-const inter = Inter({ subsets: ["latin"] });
-
-export default function Home() {
+export default function QuestionPage() {
   return (
     <ToastProvider>
       <ConfigProvider>
         <ConnectionProvider>
-          <HomeInner />
+          <QuestionInner />
         </ConnectionProvider>
       </ConfigProvider>
     </ToastProvider>
   );
 }
 
-export function HomeInner() {
+export function QuestionInner() {
+  const router = useRouter();
+  const { id, title } = router.query;
+  const [questionInfo, setQuestionInfo] = useState<{ id: string; title: string } | null>(null);
+  
   const { shouldConnect, wsUrl, token, mode, connect, disconnect } =
     useConnection();
 
   const { config } = useConfig();
   const { toastMessage, setToastMessage } = useToast();
+
+  // Set question info from URL parameters
+  useEffect(() => {
+    if (router.isReady && id && title) {
+      const questionData = {
+        id: id as string,
+        title: title as string
+      };
+      
+      setQuestionInfo(questionData);
+      
+      // Store in localStorage for main.py to access
+      localStorage.setItem('questionId', questionData.id);
+      localStorage.setItem('questionTitle', questionData.title);
+      
+      // Log for debugging
+      console.log('Question info from URL:', questionData);
+    }
+  }, [router.isReady, id, title]);
 
   const handleConnect = useCallback(
     async (c: boolean, mode: ConnectionMode) => {
@@ -71,10 +92,19 @@ export function HomeInner() {
     return false;
   }, [wsUrl]);
 
+  // Handle loading state for question info
+  if (!questionInfo && router.isReady && (id || title)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Head>
-        <title>{config.title}</title>
+        <title>{questionInfo?.title ? `${questionInfo.title} | Coding Challenge` : config.title}</title>
         <meta name="description" content={config.description} />
         <meta
           name="viewport"
@@ -82,15 +112,9 @@ export function HomeInner() {
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-        <meta
-          property="og:image"
-          content="https://livekit.io/images/og/agents-playground.png"
-        />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="relative flex flex-col justify-center px-4 items-center h-full w-full" style={{ background: "radial-gradient(circle at center, #121830 0%, #070710 100%)" }}>
+      <main className="relative flex flex-col justify-center px-4 items-center h-full w-full bg-black repeating-square-background">
         <AnimatePresence>
           {toastMessage && (
             <motion.div
@@ -135,4 +159,4 @@ export function HomeInner() {
       </main>
     </>
   );
-}
+} 

@@ -9,6 +9,12 @@ require("dotenv").config({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  // Explicitly enable SWC
+  swcMinify: true,
+  // Disable Babel completely
+  compiler: {
+    emotion: false, // Not using emotion
+  },
 };
 
 module.exports = withNextPluginPreval(nextConfig);

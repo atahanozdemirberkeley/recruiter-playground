@@ -2,14 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap');
+
+@layer components {
+  .difficulty-easy {
+    @apply bg-green-500/30 text-green-300;
+  }
+
+  .difficulty-medium {
+    @apply bg-yellow-500/30 text-yellow-300;
+  }
+
+  .difficulty-hard {
+    @apply bg-red-500/30 text-red-300;
+  }
+  
+  .bg-gradient-radial {
+    background-image: radial-gradient(circle at 50% 20%, rgba(80, 65, 119, 0.3) 0%, rgba(10, 15, 29, 0.8) 70%);
+  }
+}
+
+:root {
+  --standard-gray: rgb(115 115 115 / var(--tw-text-opacity, 1));
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background: black;
+  background-image: radial-gradient(circle at 50% 20%, rgba(80, 65, 119, 0.3) 0%, rgba(10, 15, 29, 0.8) 70%);
+  background-size: 100% 100%;
+  background-attachment: fixed;
+  font-family: 'Inter', sans-serif;
   --lk-va-bar-gap: 4px;
   --lk-va-bar-width: 4px;
   --lk-va-border-radius: 2px;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent scrolling */
+  overflow: hidden;
   position: fixed;
   width: 100vw;
   height: 100vh;
@@ -20,6 +52,42 @@ body {
   height: 100vh;
   position: fixed;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+
+.perspective-container {
+  position: relative;
+}
+
+.perspective-tilt {
+  transition: none;
+}
+
+.perspective-hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.glass-card {
+  @apply bg-black/20 border border-gray-800/40 rounded-md;
+}
+
+.glass-panel {
+  background: rgba(45, 51, 86, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: none;
+  border-radius: 4px;
+}
+
+.glass-navbar {
+  background: rgba(18, 22, 38, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header-gradient {
+  @apply bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent;
 }
 
 .repeating-square-background {
@@ -43,7 +111,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555; /* Even lighter grey thumb on hover */
+  background: #555;
 }
 
 ::-webkit-scrollbar {
@@ -58,4 +126,36 @@ body {
   100% {
     opacity: 1;
   }
+}
+
+.decorative-blur {
+  @apply absolute rounded-full blur-md pointer-events-none opacity-20;
+  z-index: -1;
+}
+
+.input-recurit {
+  @apply bg-recurit-blue/30 border-none focus:ring-2 focus:ring-recurit-accent/50 rounded-md text-white p-2;
+}
+
+.button-recurit {
+  @apply bg-recurit-accent/80 text-white rounded-md  font-medium;
+}
+
+/* Override all text-gray classes with standard gray */
+.text-gray-100, .text-gray-200, .text-gray-300, .text-gray-400, .text-gray-500, 
+.text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900 {
+  color: var(--standard-gray) !important;
+}
+
+/* Monaco editor overrides */
+.monaco-editor {
+  background-color: #0d1020 !important;
+}
+
+.monaco-editor .margin {
+  background-color: #0d1020 !important;
+}
+
+.monaco-editor-background {
+  background-color: #0d1020 !important;
 }

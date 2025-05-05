@@ -12,6 +12,7 @@ import {
   TranscriptionSegment,
 } from "livekit-client";
 import { useEffect, useState } from "react";
+import tailwindTheme from "src/lib/tailwindTheme.preval";
 
 export function TranscriptionTile({
   agentAudioTrack,
@@ -27,6 +28,20 @@ export function TranscriptionTile({
     source: Track.Source.Microphone,
     participant: localParticipant.localParticipant,
   });
+
+  // Convert Tailwind color name to hex color if needed
+  const getColorValue = () => {
+    try {
+      // @ts-ignore - tailwindTheme.colors might not be fully typed
+      const colorObj = tailwindTheme.colors[accentColor];
+      if (colorObj && colorObj["500"]) {
+        return colorObj["500"];
+      }
+    } catch (e) {
+      console.error("Error getting color value:", e);
+    }
+    return accentColor; // fallback to original value
+  };
 
   const [transcripts, setTranscripts] = useState<Map<string, ChatMessageType>>(
     new Map()
@@ -91,7 +106,7 @@ export function TranscriptionTile({
     localMessages.segments,
   ]);
 
-  return <ChatTile messages={messages} accentColor={accentColor} />;
+  return <ChatTile messages={messages} accentColor={getColorValue()} />;
 }
 
 function segmentToChatMessage(

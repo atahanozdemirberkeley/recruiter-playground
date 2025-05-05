@@ -24,6 +24,12 @@ load_dotenv()
 
 QUESTION_NUMBER = 2
 
+# Create FastAPI instance
+app = FastAPI()
+# Setup API with CORS and routes
+setup_api(app)
+
+
 async def entrypoint(ctx: JobContext):
     
     logger.info("[DEBUG] Starting entrypoint")
@@ -74,6 +80,8 @@ async def entrypoint(ctx: JobContext):
     await session.start(room=ctx.room, agent=intro_agent, room_input_options=RoomInputOptions(
         noise_cancellation=noise_cancellation.BVC(),
     ),)
+
+    await data_utils.send_question_to_frontend()
 
     # Start the file watcher
     interview_controller.file_watcher.start_watching()
